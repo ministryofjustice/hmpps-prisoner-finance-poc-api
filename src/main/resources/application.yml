@@ -1,10 +1,10 @@
 info.app:
-  name: HMPPS Template Kotlin
+  name: HMPPS Prisoner Finance Poc Api
   version: 1.0
 
 spring:
   application:
-    name: hmpps-template-kotlin
+    name: hmpps-prisoner-finance-poc-api
   codec:
     max-in-memory-size: 10MB
 
