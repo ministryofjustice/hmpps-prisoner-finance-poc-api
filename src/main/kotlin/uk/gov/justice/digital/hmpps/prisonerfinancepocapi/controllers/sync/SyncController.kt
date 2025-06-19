@@ -15,8 +15,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE__SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceReceipt
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
@@ -28,8 +28,6 @@ import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
 @Tag(name = TAG_NOMIS_SYNC)
 @RestController
-@RequestMapping("/sync", produces = [MediaType.APPLICATION_JSON_VALUE])
-@PreAuthorize("hasAnyAuthority('ROLE_PRISONER_FINANCE__RW')")
 class SyncController(
   @Autowired private val syncService: SyncService,
 ) {
@@ -41,10 +39,9 @@ class SyncController(
       Those that have already been posted and can be identified will be updated with metadata only.
       If the core details of a transaction have changed, the ledger will need to reverse the original transaction and post a new one.
     """,
-    security = [SecurityRequirement(name = "bearer-jwt")],
   )
   @PostMapping(
-    path = ["/offender-transactions"],
+    path = ["/sync/offender-transactions"],
     consumes = [MediaType.APPLICATION_JSON_VALUE],
   )
   @ApiResponses(
@@ -81,6 +78,8 @@ class SyncController(
       ),
     ],
   )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
   fun postOffenderTransaction(@Valid @RequestBody request: SyncOffenderTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
     val receipt = syncService.syncOffenderTransaction(request)
     return when (receipt.action) {
@@ -92,10 +91,10 @@ class SyncController(
   @Operation(
     summary = "Report General Ledger Balances",
     description = "Receives and synchronizes a batch of general ledger account balances from the source system.",
-    security = [SecurityRequirement(name = "bearer-jwt")],
   )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
   @PostMapping(
-    path = ["/general-ledger-balances"],
+    path = ["/sync/general-ledger-balances"],
     consumes = [MediaType.APPLICATION_JSON_VALUE],
   )
   @ApiResponses(
@@ -132,6 +131,8 @@ class SyncController(
       ),
     ],
   )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
   fun postGeneralLedgerBalanceReport(@Valid @RequestBody request: SyncGeneralLedgerBalanceRequest): ResponseEntity<SyncGeneralLedgerBalanceReceipt> {
     val receipt = syncService.syncGeneralLedgerBalanceReport(request)
     return when (receipt.action) {
@@ -147,10 +148,9 @@ class SyncController(
       Those that have already been posted and can be identified will be updated with metadata only.
       If the core details of a transaction have changed, the ledger will need to reverse the original transaction and post a new one.
     """,
-    security = [SecurityRequirement(name = "bearer-jwt")],
   )
   @PostMapping(
-    path = ["/general-ledger-transactions"],
+    path = ["/sync/general-ledger-transactions"],
     consumes = [MediaType.APPLICATION_JSON_VALUE],
   )
   @ApiResponses(
@@ -187,6 +187,8 @@ class SyncController(
       ),
     ],
   )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
   fun postGeneralLedgerTransaction(@Valid @RequestBody request: SyncGeneralLedgerTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
     val receipt = syncService.syncGeneralLedgerTransaction(request)
 
