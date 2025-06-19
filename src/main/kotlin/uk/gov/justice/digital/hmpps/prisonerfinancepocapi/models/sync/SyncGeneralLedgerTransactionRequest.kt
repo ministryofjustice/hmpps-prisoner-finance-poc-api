@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync
 
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Size
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -33,6 +34,12 @@ data class SyncGeneralLedgerTransactionRequest(
   val transactionTimestamp: OffsetDateTime,
 
   @Schema(
+    description = "The date and time the transaction was created.",
+    example = "2024-06-18T14:30:00.123456Z",
+  )
+  val createdAt: OffsetDateTime,
+
+  @Schema(
     description = "The user ID of the person who created the transaction in the source system.",
     example = "JD12345",
   )
@@ -56,16 +63,17 @@ data class SyncGeneralLedgerTransactionRequest(
     description = "The user ID of the person who last modified the transaction. Required if lastModifiedAt has been supplied.",
     example = "AB11DZ",
   )
-  @field:Size(min = 1, max = 32, message = "Last modified by must be <= 32 characters")
+  @field:Size(max = 32, message = "Last modified by must be <= 32 characters")
   val lastModifiedBy: String?,
 
   @Schema(
     description = "The displayable name of the person who last modified the transaction. Required if lastModifiedAt has been supplied.",
     example = "U Dated",
   )
-  @field:Size(min = 1, max = 255, message = "Last modified by display name must be <= 255 characters")
+  @field:Size(max = 255, message = "Last modified by display name must be <= 255 characters")
   val lastModifiedByDisplayName: String?,
 
   @Schema(description = "A list of general ledger entries associated with this general ledger transaction.", required = true)
+  @field:Valid
   val generalLedgerEntries: List<GeneralLedgerEntry>,
 )
