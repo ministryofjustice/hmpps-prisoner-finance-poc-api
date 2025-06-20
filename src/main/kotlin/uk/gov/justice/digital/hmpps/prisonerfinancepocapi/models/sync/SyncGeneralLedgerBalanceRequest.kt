@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync
 
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.Valid
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -22,5 +23,6 @@ data class SyncGeneralLedgerBalanceRequest(
   val timestamp: OffsetDateTime,
 
   @Schema(description = "A list of individual general ledger account balances.")
+  @field:Valid
   val balances: List<GeneralLedgerAccountBalance>,
 )

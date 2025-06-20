@@ -8,12 +8,11 @@ import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE__SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class SyncOffenderTransactionTest : IntegrationTestBase() {
+class SyncGeneralLedgerTransactionTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var objectMapper: ObjectMapper
@@ -22,7 +21,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
   fun `401 unauthorised`() {
     webTestClient
       .post()
-      .uri("/sync/offender-transactions")
+      .uri("/sync/general-ledger-transactions")
       .exchange()
       .expectStatus().isUnauthorized
   }
@@ -31,22 +30,22 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
   fun `403 forbidden - does not have the right role`() {
     webTestClient
       .post()
-      .uri("/sync/offender-transactions")
+      .uri("/sync/general-ledger-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
       .headers(setAuthorisation(roles = listOf("SOME_OTHER_ROLE")))
-      .bodyValue(createSyncOffenderTransactionRequest())
+      .bodyValue(createSyncGeneralLedgerTransactionRequest())
       .exchange()
       .expectStatus().isForbidden
   }
 
   @Test
   fun `201 Created - when transaction is new`() {
-    val newTransactionRequest = createSyncOffenderTransactionRequest()
+    val newTransactionRequest = createSyncGeneralLedgerTransactionRequest()
 
     webTestClient
       .post()
-      .uri("/sync/offender-transactions")
+      .uri("/sync/general-ledger-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
@@ -63,17 +62,19 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
     val invalidMap = mapOf(
       "transactionId" to 1234,
       "caseloadId" to "GMI",
+      "description" to "General Ledger Account Transfer",
+      "transactionType" to "GJ",
       "transactionTimestamp" to OffsetDateTime.now(),
       "createdAt" to OffsetDateTime.now(),
       "createdBy" to "TESTUSER",
       "createdByDisplayName" to "Test User",
-      "offenderTransactions" to emptyList<Any>(),
+      "generalLedgerEntries" to emptyList<Any>(),
     )
     val invalidJson = objectMapper.writeValueAsString(invalidMap)
 
     webTestClient
       .post()
-      .uri("/sync/offender-transactions")
+      .uri("/sync/general-ledger-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
@@ -93,11 +94,11 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
   @Test
   fun `400 Bad Request - createdBy too long`() {
     val longString = "A".repeat(33)
-    val request = createSyncOffenderTransactionRequest().copy(createdBy = longString)
+    val request = createSyncGeneralLedgerTransactionRequest().copy(createdBy = longString)
 
     webTestClient
       .post()
-      .uri("/sync/offender-transactions")
+      .uri("/sync/general-ledger-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
@@ -106,37 +107,27 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
       .expectStatus().isBadRequest
       .expectBody()
       .jsonPath("$.userMessage").isEqualTo("Validation failure")
-      .jsonPath("$.developerMessage").isEqualTo("Validation failed: createdBy: Created by must be supplied and be <= 32 characters")
+      .jsonPath("$.developerMessage")
+      .isEqualTo("Validation failed: createdBy: Created by must be supplied and be <= 32 characters")
   }
 
-  private fun createSyncOffenderTransactionRequest(): SyncOffenderTransactionRequest = SyncOffenderTransactionRequest(
-    transactionId = (1..Int.MAX_VALUE).random(),
+  private fun createSyncGeneralLedgerTransactionRequest(): SyncGeneralLedgerTransactionRequest = SyncGeneralLedgerTransactionRequest(
+    transactionId = 19228028,
     requestId = UUID.randomUUID(),
+    description = "General Ledger Account Transfer",
+    reference = "REF12345",
     caseloadId = "GMI",
+    transactionType = "GJ",
     transactionTimestamp = OffsetDateTime.now(),
-    createdAt = OffsetDateTime.now().minusHours(1),
+    createdAt = OffsetDateTime.now(),
     createdBy = "JD12345",
     createdByDisplayName = "J Doe",
     lastModifiedAt = null,
     lastModifiedBy = null,
     lastModifiedByDisplayName = null,
-    offenderTransactions = listOf(
-      OffenderTransaction(
-        entrySequence = 1L,
-        offenderId = 1015388L,
-        offenderDisplayId = "AA001AA",
-        offenderBookingId = 455987L,
-        subAccountType = "REG",
-        postingType = "DR",
-        type = "OT",
-        description = "Sub-Account Transfer",
-        amount = 162.00,
-        reference = null,
-        generalLedgerEntries = listOf(
-          GeneralLedgerEntry(entrySequence = 1L, code = 2101, postingType = "DR", amount = 162.00),
-          GeneralLedgerEntry(entrySequence = 2L, code = 2102, postingType = "CR", amount = 162.00),
-        ),
-      ),
+    generalLedgerEntries = listOf(
+      GeneralLedgerEntry(entrySequence = 1L, code = 1101, postingType = "DR", amount = 50.00),
+      GeneralLedgerEntry(entrySequence = 2L, code = 2503, postingType = "CR", amount = 50.00),
     ),
   )
 }
