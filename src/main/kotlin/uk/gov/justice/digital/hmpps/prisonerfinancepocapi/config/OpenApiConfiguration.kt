@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 const val TAG_NOMIS_SYNC = "NOMIS Sync"
-const val ROLE_PRISONER_FINANCE__SYNC = "ROLE_PRISONER_FINANCE__SYNC"
+const val ROLE_PRISONER_FINANCE_SYNC = "ROLE_PRISONER_FINANCE_SYNC__RW"
 
 @Configuration
 class OpenApiConfiguration(buildProperties: BuildProperties) {
@@ -52,6 +52,7 @@ class OpenApiConfiguration(buildProperties: BuildProperties) {
     |
     |* `ROLE_PRISONER_FINANCE__RO`: Grants **read-only access** (e.g., retrieving transactions, balances).
     |* `ROLE_PRISONER_FINANCE__RW`: Grants **read/write access** (e.g., creating transactions, adding amendments).
+    |* `ROLE_PRISONER_FINANCE_SYNC__RW`: Grants **read/write access** to the NOMIS sync endpoints.
   """.trimMargin()
 
   private fun apiContact(): Contact = Contact()
