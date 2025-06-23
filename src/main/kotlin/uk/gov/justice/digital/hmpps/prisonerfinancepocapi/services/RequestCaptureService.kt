@@ -1,12 +1,13 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.domain.NomisSyncPayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.repository.NomisSyncPayloadRepository
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -16,13 +17,17 @@ class RequestCaptureService(
   private val objectMapper: ObjectMapper,
 ) {
 
+  private companion object {
+    private val log = LoggerFactory.getLogger(this::class.java)
+  }
+
   fun captureAndStoreRequest(
     requestBodyObject: Any,
   ): NomisSyncPayload {
     val rawBodyJson = try {
       objectMapper.writeValueAsString(requestBodyObject)
     } catch (e: Exception) {
-      println("ERROR: Could not serialize request body to JSON for capture: ${e.message}")
+      log.error("Could not serialize request body to JSON for capture. Type: ${requestBodyObject::class.simpleName}", e)
       "{}"
     }
 
@@ -36,21 +41,21 @@ class RequestCaptureService(
         transactionId = requestBodyObject.transactionId
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
-        requestTypeIdentifier = "SyncOffenderTransaction"
+        requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName
       }
       is SyncGeneralLedgerBalanceRequest -> {
         requestId = requestBodyObject.requestId
-        requestTypeIdentifier = "SyncGeneralLedgerBalance"
+        requestTypeIdentifier = SyncGeneralLedgerBalanceRequest::class.simpleName
       }
       is SyncGeneralLedgerTransactionRequest -> {
         transactionId = requestBodyObject.transactionId
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
-        requestTypeIdentifier = "SyncGeneralLedgerTransaction"
+        requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName
       }
       else -> {
         requestTypeIdentifier = requestBodyObject::class.simpleName
-        println("INFO: Unrecognized request body type for capture: ${requestBodyObject::class.simpleName}. Storing with generic identifier.")
+        log.warn("Unrecognized request body type for capture: ${requestBodyObject::class.simpleName}. Storing with generic identifier.")
       }
     }
 
