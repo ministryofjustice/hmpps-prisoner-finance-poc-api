@@ -9,24 +9,42 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransa
 import java.util.UUID
 
 @Service
-class SyncService {
-  fun syncGeneralLedgerTransaction(request: SyncGeneralLedgerTransactionRequest): SyncTransactionReceipt = SyncTransactionReceipt(
-    transactionId = request.transactionId,
-    requestId = request.requestId,
-    synchronizedTransactionId = UUID.randomUUID(),
-    action = SyncTransactionReceipt.Action.CREATED,
-  )
+class SyncService(
+  private val requestCaptureService: RequestCaptureService,
+) {
+  fun syncGeneralLedgerTransaction(
+    request: SyncGeneralLedgerTransactionRequest,
+  ): SyncTransactionReceipt {
+    requestCaptureService.captureAndStoreRequest(request)
+    return SyncTransactionReceipt(
+      transactionId = request.transactionId,
+      requestId = request.requestId,
+      synchronizedTransactionId = UUID.randomUUID(),
+      action = SyncTransactionReceipt.Action.CREATED,
+    )
+  }
 
-  fun syncGeneralLedgerBalanceReport(request: SyncGeneralLedgerBalanceRequest): SyncGeneralLedgerBalanceReceipt = SyncGeneralLedgerBalanceReceipt(
-    requestId = request.requestId,
-    id = UUID.randomUUID(),
-    action = SyncGeneralLedgerBalanceReceipt.Action.CREATED,
-  )
+  fun syncGeneralLedgerBalanceReport(
+    request: SyncGeneralLedgerBalanceRequest,
+  ): SyncGeneralLedgerBalanceReceipt {
+    requestCaptureService.captureAndStoreRequest(request)
 
-  fun syncOffenderTransaction(request: SyncOffenderTransactionRequest): SyncTransactionReceipt = SyncTransactionReceipt(
-    transactionId = request.transactionId,
-    requestId = request.requestId,
-    synchronizedTransactionId = UUID.randomUUID(),
-    action = SyncTransactionReceipt.Action.CREATED,
-  )
+    return SyncGeneralLedgerBalanceReceipt(
+      requestId = request.requestId,
+      id = UUID.randomUUID(),
+      action = SyncGeneralLedgerBalanceReceipt.Action.CREATED,
+    )
+  }
+
+  fun syncOffenderTransaction(
+    request: SyncOffenderTransactionRequest,
+  ): SyncTransactionReceipt {
+    requestCaptureService.captureAndStoreRequest(request)
+    return SyncTransactionReceipt(
+      transactionId = request.transactionId,
+      requestId = request.requestId,
+      synchronizedTransactionId = UUID.randomUUID(),
+      action = SyncTransactionReceipt.Action.CREATED,
+    )
+  }
 }
