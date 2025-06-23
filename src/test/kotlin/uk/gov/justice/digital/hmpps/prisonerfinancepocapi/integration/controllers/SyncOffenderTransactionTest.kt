@@ -5,7 +5,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE__SYNC
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
@@ -49,7 +49,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
       .uri("/sync/offender-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
-      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .bodyValue(newTransactionRequest)
       .exchange()
       .expectStatus().isCreated
@@ -76,7 +76,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
       .uri("/sync/offender-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
-      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .bodyValue(invalidJson)
       .exchange()
       .expectStatus().isBadRequest
@@ -100,7 +100,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
       .uri("/sync/offender-transactions")
       .accept(MediaType.APPLICATION_JSON)
       .contentType(MediaType.APPLICATION_JSON)
-      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE__SYNC)))
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .bodyValue(request)
       .exchange()
       .expectStatus().isBadRequest

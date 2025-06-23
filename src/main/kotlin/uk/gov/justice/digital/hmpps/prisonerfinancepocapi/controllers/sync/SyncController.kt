@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE__SYNC
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceReceipt
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
@@ -78,8 +78,8 @@ class SyncController(
       ),
     ],
   )
-  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
-  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun postOffenderTransaction(@Valid @RequestBody request: SyncOffenderTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
     val receipt = syncService.syncOffenderTransaction(request)
     return when (receipt.action) {
@@ -92,7 +92,7 @@ class SyncController(
     summary = "Report General Ledger Balances",
     description = "Receives and synchronizes a batch of general ledger account balances from the source system.",
   )
-  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PostMapping(
     path = ["/sync/general-ledger-balances"],
     consumes = [MediaType.APPLICATION_JSON_VALUE],
@@ -131,8 +131,8 @@ class SyncController(
       ),
     ],
   )
-  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
-  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun postGeneralLedgerBalanceReport(@Valid @RequestBody request: SyncGeneralLedgerBalanceRequest): ResponseEntity<SyncGeneralLedgerBalanceReceipt> {
     val receipt = syncService.syncGeneralLedgerBalanceReport(request)
     return when (receipt.action) {
@@ -187,8 +187,8 @@ class SyncController(
       ),
     ],
   )
-  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE__SYNC])
-  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE__SYNC')")
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun postGeneralLedgerTransaction(@Valid @RequestBody request: SyncGeneralLedgerTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
     val receipt = syncService.syncGeneralLedgerTransaction(request)
 
