@@ -14,7 +14,7 @@ spring:
       WRITE_DATES_AS_TIMESTAMPS: false
 
   datasource:
-    url: 'jdbc:postgresql://${DB_SERVER}/nomis_sync?sslmode=prefer'
+    url: 'jdbc:postgresql://${DB_SERVER}/${DB_NAME}?sslmode=prefer'
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
