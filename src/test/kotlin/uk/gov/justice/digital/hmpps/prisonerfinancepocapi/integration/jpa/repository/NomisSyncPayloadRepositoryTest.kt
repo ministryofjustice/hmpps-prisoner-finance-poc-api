@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPa
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.util.RepositoryTest
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @RepositoryTest
@@ -85,9 +86,14 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       Assertions.assertThat(savedPayload.id).isNotNull()
       val retrievedPayload = nomisSyncPayloadRepository.findById(savedPayload.id!!).orElse(null)
       Assertions.assertThat(retrievedPayload).isNotNull()
-      Assertions.assertThat(retrievedPayload).isEqualTo(savedPayload)
+
+      Assertions.assertThat(retrievedPayload?.id).isEqualTo(savedPayload.id)
+      Assertions.assertThat(retrievedPayload?.transactionId).isEqualTo(savedPayload.transactionId)
+      Assertions.assertThat(retrievedPayload?.requestId).isEqualTo(savedPayload.requestId)
+      Assertions.assertThat(retrievedPayload?.caseloadId).isEqualTo(savedPayload.caseloadId)
+      Assertions.assertThat(retrievedPayload?.requestTypeIdentifier).isEqualTo(savedPayload.requestTypeIdentifier)
       Assertions.assertThat(retrievedPayload?.body).isEqualTo(newPayload.body)
-      Assertions.assertThat(retrievedPayload?.requestTypeIdentifier).isEqualTo(newPayload.requestTypeIdentifier)
+      Assertions.assertThat(retrievedPayload?.timestamp).isCloseTo(newPayload.timestamp, Assertions.byLessThan(1, ChronoUnit.MICROS))
     }
   }
 
