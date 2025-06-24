@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 const val TAG_NOMIS_SYNC = "NOMIS Sync"
-const val ROLE_PRISONER_FINANCE_SYNC = "ROLE_TEMPLATE_KOTLIN__UI"
+const val ROLE_PRISONER_FINANCE_SYNC = "ROLE_PRISONER_FINANCE_SYNC__RW"
 
 @Configuration
 class OpenApiConfiguration(buildProperties: BuildProperties) {
