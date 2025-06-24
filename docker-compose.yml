@@ -17,7 +17,7 @@ services:
 
   hmpps-prisoner-finance-poc-db:
     container_name: hmpps-prisoner-finance-poc-db
-    image: postgres:16
+    image: postgres:latest
     restart: always
     networks:
       - hmpps

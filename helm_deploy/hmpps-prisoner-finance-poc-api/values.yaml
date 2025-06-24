@@ -1,5 +1,6 @@
 generic-service:
   nameOverride: hmpps-prisoner-finance-poc-api
+  serviceAccountName: hmpps-prisoner-finance-poc-api
   productId: "DPS099" # productId for the product that this belongs too, i.e. DPS001, see README.md for details
 
   replicaCount: 4
@@ -13,11 +14,14 @@ generic-service:
     enabled: true
     host: app-hostname.local # override per environment
     tlsSecretName: hmpps-prisoner-finance-poc-cert
+    modsecurity_enabled: true
+    modsecurity_github_team: "hmpps-prisoner-finance"
 
   # Environment variables to load into the deployment
   env:
     JAVA_OPTS: "-Xmx512m"
     SERVER_PORT: "8080"
+    APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=$(APPINSIGHTS_INSTRUMENTATIONKEY)"
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.json
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.
@@ -28,6 +32,11 @@ generic-service:
   namespace_secrets:
     hmpps-prisoner-finance-poc-api-application-insights:
       APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    rds-postgresql-instance-output:
+      DB_SERVER: "rds_instance_endpoint"
+      DB_NAME: "database_name"
+      DB_USER: "database_username"
+      DB_PASS: "database_password"
 
   allowlist:
     groups:
