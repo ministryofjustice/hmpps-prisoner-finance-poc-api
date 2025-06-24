@@ -33,6 +33,6 @@ data class NomisSyncPayload(
   val requestTypeIdentifier: String?,
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(columnDefinition = "jsonb")
+  @Column
   val body: String,
 )

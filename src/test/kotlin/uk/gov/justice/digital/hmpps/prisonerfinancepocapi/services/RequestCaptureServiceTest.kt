@@ -16,7 +16,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any // Keep this import for 'any' where needed for generic objects
+import org.mockito.kotlin.any
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerAccountBalance
@@ -143,7 +143,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
-      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson) // Check body on captured object
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
       assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
@@ -159,7 +159,7 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerBalanceRequest)
 
       verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerBalanceRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture()) // CAPTURE HERE
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
 
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
       assertThat(capturedPayloadSentToRepo.id).isNull()
@@ -181,7 +181,7 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerTransactionRequest)
 
       verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerTransactionRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture()) // CAPTURE HERE
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
 
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
       assertThat(capturedPayloadSentToRepo.id).isNull()
