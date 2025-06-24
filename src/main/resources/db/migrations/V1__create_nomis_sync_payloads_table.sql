@@ -5,7 +5,7 @@ CREATE TABLE nomis_sync_payloads (
                                      request_id VARCHAR(36),
                                      caseload_id VARCHAR(255),
                                      request_type_identifier VARCHAR(255),
-                                     body CLOB NOT NULL
+                                     body TEXT NOT NULL
 );
 
 CREATE INDEX idx_nomis_sync_payloads_timestamp ON nomis_sync_payloads (timestamp);
