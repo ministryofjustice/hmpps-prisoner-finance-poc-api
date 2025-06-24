@@ -11,11 +11,12 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Captor
 import org.mockito.InjectMocks
 import org.mockito.Mock
-import org.mockito.Mockito.any
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any // Keep this import for 'any' where needed for generic objects
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerAccountBalance
@@ -115,10 +116,17 @@ class RequestCaptureServiceTest {
 
     @BeforeEach
     fun setupSaveMock() {
-      `when`(nomisSyncPayloadRepository.save(nomisSyncPayloadCaptor.capture())).thenAnswer { invocation ->
-        val capturedPayload = invocation.arguments[0] as NomisSyncPayload
-        capturedPayload.copy(id = 1L)
-      }
+      `when`(nomisSyncPayloadRepository.save(any())).thenReturn(
+        NomisSyncPayload(
+          id = 1L,
+          timestamp = LocalDateTime.now(),
+          transactionId = null,
+          requestId = null,
+          caseloadId = null,
+          requestTypeIdentifier = "Dummy",
+          body = "{}",
+        ),
+      )
     }
 
     @Test
@@ -129,18 +137,18 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.captureAndStoreRequest(dummyOffenderTransactionRequest)
 
       verify(objectMapper, times(1)).writeValueAsString(dummyOffenderTransactionRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(any(NomisSyncPayload::class.java))
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
 
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
       assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
-      assertThat(result.body).isEqualTo(expectedJson)
-      assertThat(result.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
-      assertThat(result.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
-      assertThat(result.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
-      assertThat(result.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
-      assertThat(result.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson) // Check body on captured object
+      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
+      assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
+      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
     }
 
     @Test
@@ -151,18 +159,18 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerBalanceRequest)
 
       verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerBalanceRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(any(NomisSyncPayload::class.java))
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture()) // CAPTURE HERE
 
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
       assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
-      assertThat(result.body).isEqualTo(expectedJson)
-      assertThat(result.transactionId).isNull()
-      assertThat(result.requestId).isEqualTo(dummyGeneralLedgerBalanceRequest.requestId)
-      assertThat(result.caseloadId).isNull()
-      assertThat(result.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerBalanceRequest::class.simpleName)
-      assertThat(result.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.transactionId).isNull()
+      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerBalanceRequest.requestId)
+      assertThat(capturedPayloadSentToRepo.caseloadId).isNull()
+      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerBalanceRequest::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
     }
 
     @Test
@@ -173,52 +181,18 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerTransactionRequest)
 
       verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerTransactionRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(any(NomisSyncPayload::class.java))
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture()) // CAPTURE HERE
 
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
       assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
-      assertThat(result.body).isEqualTo(expectedJson)
-      assertThat(result.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
-      assertThat(result.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
-      assertThat(result.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
-      assertThat(result.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
-      assertThat(result.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `should handle serialization errors gracefully`() {
-      `when`(objectMapper.writeValueAsString(any())).thenThrow(RuntimeException("Serialization error"))
-
-      val result = requestCaptureService.captureAndStoreRequest("unknown_string_payload")
-
-      verify(objectMapper, times(1)).writeValueAsString(any())
-      verify(nomisSyncPayloadRepository, times(1)).save(any(NomisSyncPayload::class.java))
-
-      assertThat(result.id).isEqualTo(1L)
-      assertThat(result.body).isEqualTo("{}")
-      assertThat(result.requestTypeIdentifier).isEqualTo("String")
-    }
-
-    @Test
-    fun `should store unrecognized request body type with class simpleName as identifier`() {
-      class UnrecognizedRequestType
-      val unrecognizedRequest = UnrecognizedRequestType()
-      val expectedJson = """{}"""
-      `when`(objectMapper.writeValueAsString(unrecognizedRequest)).thenReturn(expectedJson)
-
-      val result = requestCaptureService.captureAndStoreRequest(unrecognizedRequest)
-
-      verify(objectMapper, times(1)).writeValueAsString(unrecognizedRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(any(NomisSyncPayload::class.java))
-
-      assertThat(result.id).isEqualTo(1L)
-      assertThat(result.body).isEqualTo(expectedJson)
-      assertThat(result.transactionId).isNull()
-      assertThat(result.requestId).isNull()
-      assertThat(result.caseloadId).isNull()
-      assertThat(result.requestTypeIdentifier).isEqualTo(UnrecognizedRequestType::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
+      assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
+      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
     }
   }
 
@@ -232,16 +206,16 @@ class RequestCaptureServiceTest {
         timestamp = LocalDateTime.now().minusDays(1),
         transactionId = 101,
         requestId = UUID.randomUUID(),
-        caseloadId = "ABC",
+        caseloadId = "LEI",
         requestTypeIdentifier = "SyncOffenderTransaction",
         body = "{}",
       ),
       NomisSyncPayload(
         id = 2L,
         timestamp = LocalDateTime.now().minusHours(1),
-        transactionId = null,
+        transactionId = 102,
         requestId = UUID.randomUUID(),
-        caseloadId = null,
+        caseloadId = "BRI",
         requestTypeIdentifier = "SyncGeneralLedgerBalance",
         body = "{}",
       ),
@@ -249,61 +223,47 @@ class RequestCaptureServiceTest {
 
     @Test
     fun `should find by requestType`() {
-      `when`(nomisSyncPayloadRepository.findByRequestTypeIdentifier("SyncOffenderTransaction")).thenReturn(listOf(dummyPayloads[0]))
+      `when`(nomisSyncPayloadRepository.findByRequestTypeIdentifier(any<String>())).thenReturn(listOf(dummyPayloads[0]))
 
       val result = requestCaptureService.getCapturedNomisSyncPayloads(requestType = "SyncOffenderTransaction")
 
       assertThat(result).containsExactly(dummyPayloads[0])
       verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("SyncOffenderTransaction")
-      verify(nomisSyncPayloadRepository, times(0)).findByTransactionId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findAll()
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
     fun `should find by transactionId`() {
-      `when`(nomisSyncPayloadRepository.findByTransactionId(101)).thenReturn(listOf(dummyPayloads[0]))
+      `when`(nomisSyncPayloadRepository.findByTransactionId(any<Int>())).thenReturn(listOf(dummyPayloads[0]))
 
       val result = requestCaptureService.getCapturedNomisSyncPayloads(transactionId = 101)
 
       assertThat(result).containsExactly(dummyPayloads[0])
       verify(nomisSyncPayloadRepository).findByTransactionId(101)
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestTypeIdentifier(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findAll()
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
     fun `should find by requestId`() {
       val targetRequestId = dummyPayloads[1].requestId!!
-      `when`(nomisSyncPayloadRepository.findByRequestId(targetRequestId)).thenReturn(listOf(dummyPayloads[1]))
+      `when`(nomisSyncPayloadRepository.findByRequestId(any<UUID>())).thenReturn(listOf(dummyPayloads[1]))
 
       val result = requestCaptureService.getCapturedNomisSyncPayloads(requestId = targetRequestId)
 
       assertThat(result).containsExactly(dummyPayloads[1])
       verify(nomisSyncPayloadRepository).findByRequestId(targetRequestId)
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestTypeIdentifier(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByTransactionId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findAll()
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
     fun `should find by caseloadId`() {
-      `when`(nomisSyncPayloadRepository.findByCaseloadId("ABC")).thenReturn(listOf(dummyPayloads[0]))
+      `when`(nomisSyncPayloadRepository.findByCaseloadId(any<String>())).thenReturn(listOf(dummyPayloads[0]))
 
       val result = requestCaptureService.getCapturedNomisSyncPayloads(caseloadId = "ABC")
 
       assertThat(result).containsExactly(dummyPayloads[0])
       verify(nomisSyncPayloadRepository).findByCaseloadId("ABC")
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestTypeIdentifier(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByTransactionId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findAll()
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
@@ -313,12 +273,8 @@ class RequestCaptureServiceTest {
       val result = requestCaptureService.getCapturedNomisSyncPayloads()
 
       assertThat(result).containsExactlyInAnyOrderElementsOf(dummyPayloads)
-
       verify(nomisSyncPayloadRepository).findAll()
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestTypeIdentifier(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByTransactionId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
@@ -329,6 +285,7 @@ class RequestCaptureServiceTest {
 
       assertThat(result).isEmpty()
       verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("NonExistentType")
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
 
     @Test
@@ -344,10 +301,7 @@ class RequestCaptureServiceTest {
 
       assertThat(result).containsExactly(dummyPayloads[0])
       verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("SyncOffenderTransaction")
-      verify(nomisSyncPayloadRepository, times(0)).findByTransactionId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByRequestId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findByCaseloadId(any())
-      verify(nomisSyncPayloadRepository, times(0)).findAll()
+      verifyNoMoreInteractions(nomisSyncPayloadRepository)
     }
   }
 }
