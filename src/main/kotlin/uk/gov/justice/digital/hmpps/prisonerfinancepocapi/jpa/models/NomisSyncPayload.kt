@@ -21,7 +21,7 @@ data class NomisSyncPayload(
   val timestamp: LocalDateTime,
 
   @Column(name = "transaction_id")
-  val transactionId: Int?,
+  val transactionId: Long?,
 
   @Column(name = "request_id")
   val requestId: UUID?,

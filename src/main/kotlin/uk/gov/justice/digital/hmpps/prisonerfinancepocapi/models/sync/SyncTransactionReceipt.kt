@@ -10,7 +10,7 @@ data class SyncTransactionReceipt(
     example = "19228028",
     required = true,
   )
-  var transactionId: Int,
+  var transactionId: Long,
 
   @Schema(
     description = "The unique identifier of the **current synchronization request**. This Id was provided by the client as the idempotency key.",

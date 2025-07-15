@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "Represents a general ledger entry.")
 data class GeneralLedgerEntry(
   @Schema(description = "The sequence number for this specific general ledger entry.", example = "1", required = true)
-  val entrySequence: Long,
+  val entrySequence: Int,
 
   @Schema(description = "The general ledger account code.", example = "2101", required = true)
   val code: Int,

@@ -110,7 +110,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
   }
 
   private fun createSyncOffenderTransactionRequest(): SyncOffenderTransactionRequest = SyncOffenderTransactionRequest(
-    transactionId = (1..Int.MAX_VALUE).random(),
+    transactionId = (1..Long.MAX_VALUE).random(),
     requestId = UUID.randomUUID(),
     caseloadId = "GMI",
     transactionTimestamp = OffsetDateTime.now(),
@@ -122,7 +122,7 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
     lastModifiedByDisplayName = null,
     offenderTransactions = listOf(
       OffenderTransaction(
-        entrySequence = 1L,
+        entrySequence = 1,
         offenderId = 1015388L,
         offenderDisplayId = "AA001AA",
         offenderBookingId = 455987L,
@@ -133,8 +133,8 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
         amount = 162.00,
         reference = null,
         generalLedgerEntries = listOf(
-          GeneralLedgerEntry(entrySequence = 1L, code = 2101, postingType = "DR", amount = 162.00),
-          GeneralLedgerEntry(entrySequence = 2L, code = 2102, postingType = "CR", amount = 162.00),
+          GeneralLedgerEntry(entrySequence = 1, code = 2101, postingType = "DR", amount = 162.00),
+          GeneralLedgerEntry(entrySequence = 2, code = 2102, postingType = "CR", amount = 162.00),
         ),
       ),
     ),
