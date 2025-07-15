@@ -31,7 +31,7 @@ class RequestCaptureService(
       "{}"
     }
 
-    var transactionId: Int? = null
+    var transactionId: Long? = null
     var requestId: UUID? = null
     var caseloadId: String? = null
     var requestTypeIdentifier: String? = null
@@ -72,7 +72,7 @@ class RequestCaptureService(
 
   fun getCapturedNomisSyncPayloads(
     requestType: String? = null,
-    transactionId: Int? = null,
+    transactionId: Long? = null,
     requestId: UUID? = null,
     caseloadId: String? = null,
   ): List<NomisSyncPayload> = when {

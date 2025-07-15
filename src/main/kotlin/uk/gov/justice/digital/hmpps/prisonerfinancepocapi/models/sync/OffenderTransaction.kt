@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "Represents a single offender transaction entry, including related general ledger entries.")
 data class OffenderTransaction(
   @Schema(description = "The sequence number for this specific offender transaction entry.", example = "1", required = true)
-  val entrySequence: Long,
+  val entrySequence: Int,
 
   @Schema(description = "The internal ID of the offender.", example = "1015388", required = true)
   val offenderId: Long,

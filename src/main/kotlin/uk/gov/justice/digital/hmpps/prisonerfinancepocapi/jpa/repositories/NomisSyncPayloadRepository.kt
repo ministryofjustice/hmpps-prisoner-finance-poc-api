@@ -10,6 +10,6 @@ interface NomisSyncPayloadRepository : JpaRepository<NomisSyncPayload, Long> {
 
   fun findByRequestTypeIdentifier(requestType: String): List<NomisSyncPayload>
   fun findByRequestId(requestId: UUID): List<NomisSyncPayload>
-  fun findByTransactionId(transactionId: Int): List<NomisSyncPayload>
+  fun findByTransactionId(transactionId: Long): List<NomisSyncPayload>
   fun findByCaseloadId(caseloadId: String): List<NomisSyncPayload>
 }

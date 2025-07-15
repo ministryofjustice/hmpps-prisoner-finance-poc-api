@@ -9,7 +9,7 @@ import java.util.UUID
 @Schema(description = "Request body for synchronizing general ledger transactions. Please note these are for non-offender accounts only.")
 data class SyncGeneralLedgerTransactionRequest(
   @Schema(description = "The unique identifier for the general ledger transaction.", example = "19228028", required = true)
-  val transactionId: Int,
+  val transactionId: Long,
 
   @Schema(
     description = "A unique identifier for this synchronization request. This can be used for idempotency or tracing.",
