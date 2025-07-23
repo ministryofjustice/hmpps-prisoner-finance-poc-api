@@ -27,7 +27,6 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGenera
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -56,8 +55,8 @@ class RequestCaptureServiceTest {
       transactionId = 19228028,
       requestId = UUID.fromString("a1b2c3d4-e5f6-7890-1234-567890abcdef"),
       caseloadId = "GMI",
-      transactionTimestamp = OffsetDateTime.now(),
-      createdAt = OffsetDateTime.now(),
+      transactionTimestamp = LocalDateTime.now(),
+      createdAt = LocalDateTime.now(),
       createdBy = "JD12345",
       createdByDisplayName = "J Doe",
       lastModifiedAt = null,
@@ -84,7 +83,7 @@ class RequestCaptureServiceTest {
     )
     dummyGeneralLedgerBalanceRequest = SyncGeneralLedgerBalanceRequest(
       requestId = UUID.fromString("b2c3d4e5-f6a7-8901-2345-67890abcdef0"),
-      timestamp = OffsetDateTime.now(),
+      timestamp = LocalDateTime.now(),
       balances = listOf(
         GeneralLedgerAccountBalance(code = 1101, name = "Bank", balance = BigDecimal("12.50")),
       ),
@@ -96,8 +95,8 @@ class RequestCaptureServiceTest {
       reference = "REF12345",
       caseloadId = "MDI",
       transactionType = "GJ",
-      transactionTimestamp = OffsetDateTime.now(),
-      createdAt = OffsetDateTime.now(),
+      transactionTimestamp = LocalDateTime.now(),
+      createdAt = LocalDateTime.now(),
       createdBy = "JD12346",
       createdByDisplayName = "J. Smith",
       lastModifiedAt = null,

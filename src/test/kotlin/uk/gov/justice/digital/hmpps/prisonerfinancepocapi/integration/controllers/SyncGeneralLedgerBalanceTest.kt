@@ -10,7 +10,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.Integratio
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerAccountBalance
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 class SyncGeneralLedgerBalanceTest : IntegrationTestBase() {
@@ -61,7 +61,7 @@ class SyncGeneralLedgerBalanceTest : IntegrationTestBase() {
   @Test
   fun `400 Bad Request - missing required requestId`() {
     val invalidMap = mapOf(
-      "timestamp" to OffsetDateTime.now(),
+      "timestamp" to LocalDateTime.now(),
       "balances" to emptyList<Any>(),
     )
     val invalidJson = objectMapper.writeValueAsString(invalidMap)
@@ -89,7 +89,7 @@ class SyncGeneralLedgerBalanceTest : IntegrationTestBase() {
   fun `400 Bad Request - missing balances`() {
     val invalidMap = mapOf(
       "requestId" to UUID.randomUUID(),
-      "timestamp" to OffsetDateTime.now(),
+      "timestamp" to LocalDateTime.now(),
     )
     val invalidJson = objectMapper.writeValueAsString(invalidMap)
 
@@ -114,7 +114,7 @@ class SyncGeneralLedgerBalanceTest : IntegrationTestBase() {
 
   private fun createSyncGeneralLedgerBalanceRequest(): SyncGeneralLedgerBalanceRequest = SyncGeneralLedgerBalanceRequest(
     requestId = UUID.randomUUID(),
-    timestamp = OffsetDateTime.now(),
+    timestamp = LocalDateTime.now(),
     balances = listOf(
       GeneralLedgerAccountBalance(code = 1101, name = "Bank", balance = BigDecimal("12.50")),
     ),

@@ -22,7 +22,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffend
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncService
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -44,8 +44,8 @@ class SyncControllerTest {
       transactionId = 19228028,
       requestId = UUID.randomUUID(),
       caseloadId = "GMI",
-      transactionTimestamp = OffsetDateTime.now(),
-      createdAt = OffsetDateTime.now(),
+      transactionTimestamp = LocalDateTime.now(),
+      createdAt = LocalDateTime.now(),
       createdBy = "JD12345",
       createdByDisplayName = "J Doe",
       lastModifiedAt = null,
@@ -72,7 +72,7 @@ class SyncControllerTest {
     )
     dummyGeneralLedgerBalanceRequest = SyncGeneralLedgerBalanceRequest(
       requestId = UUID.randomUUID(),
-      timestamp = OffsetDateTime.now(),
+      timestamp = LocalDateTime.now(),
       balances = listOf(
         GeneralLedgerAccountBalance(code = 1101, name = "Bank", balance = BigDecimal("12.50")),
       ),
@@ -84,8 +84,8 @@ class SyncControllerTest {
       reference = "REF12345",
       caseloadId = "GMI",
       transactionType = "GJ",
-      transactionTimestamp = OffsetDateTime.now(),
-      createdAt = OffsetDateTime.now(),
+      transactionTimestamp = LocalDateTime.now(),
+      createdAt = LocalDateTime.now(),
       createdBy = "JD12345",
       createdByDisplayName = "J Doe",
       lastModifiedAt = null,
