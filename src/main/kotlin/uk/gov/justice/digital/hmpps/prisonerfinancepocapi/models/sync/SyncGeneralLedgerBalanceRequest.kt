@@ -2,7 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Schema(description = "Request body for synchronizing general ledger balances from an external system.")
@@ -17,10 +17,10 @@ data class SyncGeneralLedgerBalanceRequest(
 
   @Schema(
     description = "The timestamp when these general ledger balances were generated or last updated in the source system (ISO 8601 format).",
-    example = "2024-06-18T14:30:00.123456Z",
+    example = "2024-06-18T14:30:00.123456",
     required = true,
   )
-  val timestamp: OffsetDateTime,
+  val timestamp: LocalDateTime,
 
   @Schema(description = "A list of individual general ledger account balances.")
   @field:Valid

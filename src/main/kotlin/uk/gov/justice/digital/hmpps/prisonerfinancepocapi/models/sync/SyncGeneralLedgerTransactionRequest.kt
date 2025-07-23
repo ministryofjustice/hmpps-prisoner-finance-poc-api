@@ -3,7 +3,7 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Size
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Schema(description = "Request body for synchronizing general ledger transactions. Please note these are for non-offender accounts only.")
@@ -30,14 +30,14 @@ data class SyncGeneralLedgerTransactionRequest(
   @Schema(description = "The transaction type", example = "GJ", required = true)
   val transactionType: String,
 
-  @Schema(description = "The full timestamp of the transaction (ISO 8601).", example = "2011-09-30T09:08:08.671682Z", required = true)
-  val transactionTimestamp: OffsetDateTime,
+  @Schema(description = "The full timestamp of the transaction (ISO 8601).", example = "2011-09-30T09:08:08.671682", required = true)
+  val transactionTimestamp: LocalDateTime,
 
   @Schema(
     description = "The date and time the transaction was created.",
-    example = "2024-06-18T14:30:00.123456Z",
+    example = "2024-06-18T14:30:00.123456",
   )
-  val createdAt: OffsetDateTime,
+  val createdAt: LocalDateTime,
 
   @Schema(
     description = "The user ID of the person who created the transaction in the source system.",
@@ -55,9 +55,9 @@ data class SyncGeneralLedgerTransactionRequest(
 
   @Schema(
     description = "The date and time the transaction was last modified. Only provided if the transaction has been modified since creation. (ISO 8601 format with offset)",
-    example = "2022-07-15T23:03:01.123456Z",
+    example = "2022-07-15T23:03:01.123456",
   )
-  val lastModifiedAt: OffsetDateTime?,
+  val lastModifiedAt: LocalDateTime?,
 
   @Schema(
     description = "The user ID of the person who last modified the transaction. Required if lastModifiedAt has been supplied.",

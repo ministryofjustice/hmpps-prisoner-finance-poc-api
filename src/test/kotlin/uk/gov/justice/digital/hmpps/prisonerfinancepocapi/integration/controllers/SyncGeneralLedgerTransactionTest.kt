@@ -9,7 +9,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_F
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 class SyncGeneralLedgerTransactionTest : IntegrationTestBase() {
@@ -64,8 +64,8 @@ class SyncGeneralLedgerTransactionTest : IntegrationTestBase() {
       "caseloadId" to "GMI",
       "description" to "General Ledger Account Transfer",
       "transactionType" to "GJ",
-      "transactionTimestamp" to OffsetDateTime.now(),
-      "createdAt" to OffsetDateTime.now(),
+      "transactionTimestamp" to LocalDateTime.now(),
+      "createdAt" to LocalDateTime.now(),
       "createdBy" to "TESTUSER",
       "createdByDisplayName" to "Test User",
       "generalLedgerEntries" to emptyList<Any>(),
@@ -118,8 +118,8 @@ class SyncGeneralLedgerTransactionTest : IntegrationTestBase() {
     reference = "REF12345",
     caseloadId = "GMI",
     transactionType = "GJ",
-    transactionTimestamp = OffsetDateTime.now(),
-    createdAt = OffsetDateTime.now(),
+    transactionTimestamp = LocalDateTime.now(),
+    createdAt = LocalDateTime.now(),
     createdBy = "JD12345",
     createdByDisplayName = "J Doe",
     lastModifiedAt = null,

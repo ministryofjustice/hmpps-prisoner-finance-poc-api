@@ -10,7 +10,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.Integratio
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 class SyncOffenderTransactionTest : IntegrationTestBase() {
@@ -63,8 +63,8 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
     val invalidMap = mapOf(
       "transactionId" to 1234,
       "caseloadId" to "GMI",
-      "transactionTimestamp" to OffsetDateTime.now(),
-      "createdAt" to OffsetDateTime.now(),
+      "transactionTimestamp" to LocalDateTime.now(),
+      "createdAt" to LocalDateTime.now(),
       "createdBy" to "TESTUSER",
       "createdByDisplayName" to "Test User",
       "offenderTransactions" to emptyList<Any>(),
@@ -113,8 +113,8 @@ class SyncOffenderTransactionTest : IntegrationTestBase() {
     transactionId = (1..Long.MAX_VALUE).random(),
     requestId = UUID.randomUUID(),
     caseloadId = "GMI",
-    transactionTimestamp = OffsetDateTime.now(),
-    createdAt = OffsetDateTime.now().minusHours(1),
+    transactionTimestamp = LocalDateTime.now(),
+    createdAt = LocalDateTime.now().minusHours(1),
     createdBy = "JD12345",
     createdByDisplayName = "J Doe",
     lastModifiedAt = null,
