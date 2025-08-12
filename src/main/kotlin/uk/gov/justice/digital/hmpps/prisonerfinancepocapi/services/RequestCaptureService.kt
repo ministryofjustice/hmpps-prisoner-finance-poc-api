@@ -5,10 +5,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.UUID
 
 @Service
@@ -34,7 +37,9 @@ class RequestCaptureService(
     var transactionId: Long? = null
     var requestId: UUID? = null
     var caseloadId: String? = null
-    var requestTypeIdentifier: String? = null
+    var requestTypeIdentifier: String?
+    var transactionTimestamp: LocalDateTime? = null
+    var offenderId: Long? = null
 
     when (requestBodyObject) {
       is SyncOffenderTransactionRequest -> {
@@ -42,16 +47,25 @@ class RequestCaptureService(
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName
-      }
-      is SyncGeneralLedgerBalanceRequest -> {
-        requestId = requestBodyObject.requestId
-        requestTypeIdentifier = SyncGeneralLedgerBalanceRequest::class.simpleName
+        offenderId = requestBodyObject.offenderTransactions.first().offenderId
+        // Convert the local transaction timestamp to UTC
+        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
+        val sourceZone = ZoneId.of("Europe/London") // Assuming source system time zone is BST
+        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
+          .withZoneSameInstant(ZoneOffset.UTC)
+          .toLocalDateTime()
       }
       is SyncGeneralLedgerTransactionRequest -> {
         transactionId = requestBodyObject.transactionId
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName
+        // Convert the local transaction timestamp to UTC
+        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
+        val sourceZone = ZoneId.of("Europe/London") // Assuming source system time zone is BST
+        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
+          .withZoneSameInstant(ZoneOffset.UTC)
+          .toLocalDateTime()
       }
       else -> {
         requestTypeIdentifier = requestBodyObject::class.simpleName
@@ -60,12 +74,14 @@ class RequestCaptureService(
     }
 
     val payload = NomisSyncPayload(
-      timestamp = LocalDateTime.now(),
+      timestamp = LocalDateTime.now(ZoneOffset.UTC),
       transactionId = transactionId,
       requestId = requestId,
       caseloadId = caseloadId,
       requestTypeIdentifier = requestTypeIdentifier,
       body = rawBodyJson,
+      transactionTimestamp = transactionTimestamp,
+      offenderId = offenderId,
     )
     return nomisSyncPayloadRepository.save(payload)
   }
@@ -81,5 +97,21 @@ class RequestCaptureService(
     requestId != null -> nomisSyncPayloadRepository.findByRequestId(requestId)
     caseloadId != null -> nomisSyncPayloadRepository.findByCaseloadId(caseloadId)
     else -> nomisSyncPayloadRepository.findAll()
+  }
+
+  fun findNomisSyncPayloadById(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findById(transactionId).orElse(null)
+
+  fun findGeneralLedgerTransactionsByTimestampBetween(startDate: LocalDate, endDate: LocalDate): List<NomisSyncPayload> {
+    val userZone = ZoneId.of("Europe/London")
+
+    // Convert the start and end of the user's local day to UTC
+    val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
+    val endOfUserDayInUtc = ZonedDateTime.of(endDate.plusDays(1).atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
+
+    return nomisSyncPayloadRepository.findAllByTransactionTimestampBetweenAndRequestTypeIdentifier(
+      startOfUserDayInUtc.toLocalDateTime(),
+      endOfUserDayInUtc.toLocalDateTime(),
+      SyncGeneralLedgerTransactionRequest::class.simpleName!!,
+    )
   }
 }

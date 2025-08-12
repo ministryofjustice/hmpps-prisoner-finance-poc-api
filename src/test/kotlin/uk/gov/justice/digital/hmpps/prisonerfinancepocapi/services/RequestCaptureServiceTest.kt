@@ -19,14 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerAccountBalance
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerBalanceRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
-import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -46,7 +44,6 @@ class RequestCaptureServiceTest {
   private lateinit var nomisSyncPayloadCaptor: ArgumentCaptor<NomisSyncPayload>
 
   private lateinit var dummyOffenderTransactionRequest: SyncOffenderTransactionRequest
-  private lateinit var dummyGeneralLedgerBalanceRequest: SyncGeneralLedgerBalanceRequest
   private lateinit var dummyGeneralLedgerTransactionRequest: SyncGeneralLedgerTransactionRequest
 
   @BeforeEach
@@ -81,13 +78,6 @@ class RequestCaptureServiceTest {
         ),
       ),
     )
-    dummyGeneralLedgerBalanceRequest = SyncGeneralLedgerBalanceRequest(
-      requestId = UUID.fromString("b2c3d4e5-f6a7-8901-2345-67890abcdef0"),
-      timestamp = LocalDateTime.now(),
-      balances = listOf(
-        GeneralLedgerAccountBalance(code = 1101, name = "Bank", balance = BigDecimal("12.50")),
-      ),
-    )
     dummyGeneralLedgerTransactionRequest = SyncGeneralLedgerTransactionRequest(
       transactionId = 19228029,
       requestId = UUID.fromString("c3d4e5f6-a7b8-9012-3456-7890abcdef01"),
@@ -118,7 +108,7 @@ class RequestCaptureServiceTest {
       `when`(nomisSyncPayloadRepository.save(any())).thenReturn(
         NomisSyncPayload(
           id = 1L,
-          timestamp = LocalDateTime.now(),
+          timestamp = LocalDateTime.now(ZoneOffset.UTC),
           transactionId = null,
           requestId = null,
           caseloadId = null,
@@ -147,29 +137,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `should serialize and store SyncGeneralLedgerBalanceRequest with correct metadata`() {
-      val expectedJson = """{"some":"json","from":"generalLedgerBalance"}"""
-      `when`(objectMapper.writeValueAsString(dummyGeneralLedgerBalanceRequest)).thenReturn(expectedJson)
-
-      val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerBalanceRequest)
-
-      verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerBalanceRequest)
-      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
-
-      val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
-      assertThat(capturedPayloadSentToRepo.id).isNull()
-
-      assertThat(result.id).isEqualTo(1L)
-      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
-      assertThat(capturedPayloadSentToRepo.transactionId).isNull()
-      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerBalanceRequest.requestId)
-      assertThat(capturedPayloadSentToRepo.caseloadId).isNull()
-      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerBalanceRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
     }
 
     @Test
@@ -191,7 +159,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
     }
   }
 
@@ -202,7 +170,7 @@ class RequestCaptureServiceTest {
     private val dummyPayloads = listOf(
       NomisSyncPayload(
         id = 1L,
-        timestamp = LocalDateTime.now().minusDays(1),
+        timestamp = LocalDateTime.now(ZoneOffset.UTC).minusDays(1),
         transactionId = 101,
         requestId = UUID.randomUUID(),
         caseloadId = "LEI",
@@ -211,7 +179,7 @@ class RequestCaptureServiceTest {
       ),
       NomisSyncPayload(
         id = 2L,
-        timestamp = LocalDateTime.now().minusHours(1),
+        timestamp = LocalDateTime.now(ZoneOffset.UTC).minusHours(1),
         transactionId = 102,
         requestId = UUID.randomUUID(),
         caseloadId = "BRI",

@@ -32,6 +32,12 @@ data class NomisSyncPayload(
   @Column(name = "request_type_identifier")
   val requestTypeIdentifier: String?,
 
+  @Column(name = "offender_id")
+  val offenderId: Long? = null,
+
+  @Column(name = "transaction_timestamp")
+  val transactionTimestamp: LocalDateTime? = null,
+
   @JdbcTypeCode(SqlTypes.JSON)
   @Column
   val body: String,

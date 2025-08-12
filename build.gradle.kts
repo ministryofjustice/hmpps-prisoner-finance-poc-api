@@ -17,6 +17,7 @@ dependencies {
 
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-validation")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
   runtimeOnly("org.postgresql:postgresql:42.7.7")
   runtimeOnly("org.flywaydb:flyway-core")

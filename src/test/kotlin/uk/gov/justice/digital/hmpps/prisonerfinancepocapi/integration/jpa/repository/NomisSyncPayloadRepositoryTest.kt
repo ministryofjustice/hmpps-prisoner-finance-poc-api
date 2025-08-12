@@ -21,11 +21,9 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
 ) {
 
   private val requestType1 = "SyncOffenderTransaction"
-  private val requestType2 = "SyncGeneralLedgerBalance"
 
   private lateinit var payload1: NomisSyncPayload
   private lateinit var payload2: NomisSyncPayload
-  private lateinit var payload3: NomisSyncPayload
 
   @BeforeEach
   fun setup() {
@@ -45,24 +43,14 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     entityManager.persistAndFlush(payload1)
 
     payload2 = NomisSyncPayload(
-      timestamp = now.minusHours(1),
-      transactionId = null,
-      requestId = UUID.fromString("a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2"),
-      caseloadId = null,
-      requestTypeIdentifier = requestType2,
-      body = """{"requestId":"a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2","eventType":"SyncGeneralLedgerBalance"}""",
-    )
-    entityManager.persistAndFlush(payload2)
-
-    payload3 = NomisSyncPayload(
       timestamp = now,
       transactionId = 1002,
       requestId = UUID.fromString("a3a3a3a3-b3b3-c3c3-d3d3-e3e3e3e3e3e3"),
       caseloadId = "LEI",
       requestTypeIdentifier = requestType1,
-      body = """{"transactionId":1002,"caseloadId":"LEI","offenderId":456,"eventType":"SyncOffenderTransaction"}""",
+      body = """{"transactionId":1003,"caseloadId":"LEI","offenderId":456,"eventType":"SyncOffenderTransaction"}""",
     )
-    entityManager.persistAndFlush(payload3)
+    entityManager.persistAndFlush(payload2)
   }
 
   @Nested
@@ -104,7 +92,7 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     fun `should find payloads by request type identifier`() {
       val found = nomisSyncPayloadRepository.findByRequestTypeIdentifier(requestType1)
       Assertions.assertThat(found).hasSize(2)
-      Assertions.assertThat(found).containsExactlyInAnyOrder(payload1, payload3)
+      Assertions.assertThat(found).containsExactlyInAnyOrder(payload1, payload2)
     }
 
     @Test
@@ -146,12 +134,6 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       val found = nomisSyncPayloadRepository.findByTransactionId(9999)
       Assertions.assertThat(found).isEmpty()
     }
-
-    @Test
-    fun `should not find payload if transaction ID is null`() {
-      val found = nomisSyncPayloadRepository.findByTransactionId(payload2.transactionId ?: -1)
-      Assertions.assertThat(found).isEmpty()
-    }
   }
 
   @Nested
@@ -169,12 +151,6 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       val found = nomisSyncPayloadRepository.findByCaseloadId("XYZ")
       Assertions.assertThat(found).isEmpty()
     }
-
-    @Test
-    fun `should not find payload if caseload ID is null`() {
-      val found = nomisSyncPayloadRepository.findByCaseloadId(payload2.caseloadId ?: "DUMMY")
-      Assertions.assertThat(found).isEmpty()
-    }
   }
 
   @Nested
@@ -183,8 +159,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     @Test
     fun `should retrieve all payloads`() {
       val found = nomisSyncPayloadRepository.findAll()
-      Assertions.assertThat(found).hasSize(3)
-      Assertions.assertThat(found).containsExactlyInAnyOrder(payload1, payload2, payload3)
+      Assertions.assertThat(found).hasSize(2)
+      Assertions.assertThat(found).containsExactlyInAnyOrder(payload1, payload2)
     }
   }
 }
