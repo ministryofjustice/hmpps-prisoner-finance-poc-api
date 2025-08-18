@@ -92,7 +92,6 @@ class SyncControllerTest {
     @Test
     fun `should return CREATED status when offender transaction is new`() {
       val receipt = SyncTransactionReceipt(
-        transactionId = 19228028,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = 123456789,
         action = SyncTransactionReceipt.Action.CREATED,
@@ -108,7 +107,6 @@ class SyncControllerTest {
     @Test
     fun `should return OK status when offender transaction is updated`() {
       val receipt = SyncTransactionReceipt(
-        transactionId = 19228028,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = 123456789,
         action = SyncTransactionReceipt.Action.UPDATED,
@@ -128,7 +126,6 @@ class SyncControllerTest {
     @Test
     fun `should return CREATED status when general ledger transaction is new`() {
       val receipt = SyncTransactionReceipt(
-        transactionId = 19228028,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = 123456789,
         action = SyncTransactionReceipt.Action.CREATED,
@@ -144,7 +141,6 @@ class SyncControllerTest {
     @Test
     fun `should return OK status when general ledger transaction is updated`() {
       val receipt = SyncTransactionReceipt(
-        transactionId = 19228028,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = 123456789,
         action = SyncTransactionReceipt.Action.UPDATED,

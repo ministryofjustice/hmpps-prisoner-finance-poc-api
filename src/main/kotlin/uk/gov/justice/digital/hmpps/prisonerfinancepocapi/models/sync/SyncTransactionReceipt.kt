@@ -6,13 +6,6 @@ import java.util.UUID
 @Schema(description = "Receipt details for a synchronized transaction, indicating the outcome of the operation.")
 data class SyncTransactionReceipt(
   @field:Schema(
-    description = "The unique ID of the transaction in NOMIS. This is reflected back for mapping.",
-    example = "19228028",
-    required = true,
-  )
-  var transactionId: Long,
-
-  @field:Schema(
     description = "The unique identifier of the **current synchronization request**. This Id was provided by the client as the idempotency key.",
     example = "a1b2c3d4-e5f6-7890-1234-567890abcdef",
     required = true,
