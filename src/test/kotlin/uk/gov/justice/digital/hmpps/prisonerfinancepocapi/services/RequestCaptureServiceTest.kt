@@ -13,7 +13,6 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
@@ -187,88 +186,5 @@ class RequestCaptureServiceTest {
         body = "{}",
       ),
     )
-
-    @Test
-    fun `should find by requestType`() {
-      `when`(nomisSyncPayloadRepository.findByRequestTypeIdentifier(any<String>())).thenReturn(listOf(dummyPayloads[0]))
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(requestType = "SyncOffenderTransaction")
-
-      assertThat(result).containsExactly(dummyPayloads[0])
-      verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("SyncOffenderTransaction")
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should find by transactionId`() {
-      `when`(nomisSyncPayloadRepository.findByTransactionId(any<Long>())).thenReturn(listOf(dummyPayloads[0]))
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(transactionId = 101)
-
-      assertThat(result).containsExactly(dummyPayloads[0])
-      verify(nomisSyncPayloadRepository).findByTransactionId(101)
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should find by requestId`() {
-      val targetRequestId = dummyPayloads[1].requestId!!
-      `when`(nomisSyncPayloadRepository.findByRequestId(any<UUID>())).thenReturn(listOf(dummyPayloads[1]))
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(requestId = targetRequestId)
-
-      assertThat(result).containsExactly(dummyPayloads[1])
-      verify(nomisSyncPayloadRepository).findByRequestId(targetRequestId)
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should find by caseloadId`() {
-      `when`(nomisSyncPayloadRepository.findByCaseloadId(any<String>())).thenReturn(listOf(dummyPayloads[0]))
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(caseloadId = "ABC")
-
-      assertThat(result).containsExactly(dummyPayloads[0])
-      verify(nomisSyncPayloadRepository).findByCaseloadId("ABC")
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should findAll if no specific filter is provided`() {
-      `when`(nomisSyncPayloadRepository.findAll()).thenReturn(dummyPayloads)
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads()
-
-      assertThat(result).containsExactlyInAnyOrderElementsOf(dummyPayloads)
-      verify(nomisSyncPayloadRepository).findAll()
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should return empty list if no results found`() {
-      `when`(nomisSyncPayloadRepository.findByRequestTypeIdentifier("NonExistentType")).thenReturn(emptyList())
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(requestType = "NonExistentType")
-
-      assertThat(result).isEmpty()
-      verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("NonExistentType")
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
-
-    @Test
-    fun `should use correct filtering precedence when multiple non-null filters are provided`() {
-      `when`(nomisSyncPayloadRepository.findByRequestTypeIdentifier("SyncOffenderTransaction")).thenReturn(listOf(dummyPayloads[0]))
-
-      val result = requestCaptureService.getCapturedNomisSyncPayloads(
-        requestType = "SyncOffenderTransaction",
-        transactionId = 999,
-        requestId = UUID.randomUUID(),
-        caseloadId = "XYZ",
-      )
-
-      assertThat(result).containsExactly(dummyPayloads[0])
-      verify(nomisSyncPayloadRepository).findByRequestTypeIdentifier("SyncOffenderTransaction")
-      verifyNoMoreInteractions(nomisSyncPayloadRepository)
-    }
   }
 }

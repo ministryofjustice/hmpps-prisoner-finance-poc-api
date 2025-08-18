@@ -25,8 +25,8 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionResponse
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
@@ -243,20 +243,20 @@ class SyncController(
   }
 
   @Operation(
-    summary = "Retrieve all transactions for a specific offender with an optional date filter",
-    description = "Fetches a list of all transactions associated with a given offender's ID, optionally filtered by a date range. If no dates are provided, all transactions for the offender will be returned.",
+    summary = "Retrieve an offender transaction by its ID",
+    description = "Fetches a single offender transaction by its ID.",
   )
-  @GetMapping(path = ["/sync/offender-transactions/offender/{offenderId}"])
+  @GetMapping(path = ["/sync/offender-transactions/{id}"])
   @ApiResponses(
     value = [
       ApiResponse(
         responseCode = "200",
-        description = "Offender transactions successfully retrieved.",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = SyncOffenderTransactionListResponse::class))],
+        description = "Offender transaction successfully retrieved.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = SyncOffenderTransactionResponse::class))],
       ),
       ApiResponse(
         responseCode = "404",
-        description = "Not Found - The specified offender was not found.",
+        description = "Not Found - The specified transaction ID was not found.",
         content = [Content(schema = Schema(implementation = ErrorResponse::class))],
       ),
       ApiResponse(
@@ -278,12 +278,14 @@ class SyncController(
   )
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
-  fun getOffenderTransactionsByOffenderId(
-    @PathVariable offenderId: Long,
-    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate?,
-    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
-  ): ResponseEntity<SyncOffenderTransactionListResponse> {
-    val offenderTransactions = syncService.getOffenderTransactionsByOffenderId(offenderId, startDate, endDate)
-    return ResponseEntity.ok(SyncOffenderTransactionListResponse(offenderTransactions))
+  fun getOffenderTransactionById(
+    @PathVariable id: Long,
+  ): ResponseEntity<Any> {
+    val transaction = syncService.getOffenderTransactionById(id)
+    return if (transaction != null) {
+      ResponseEntity.ok(transaction)
+    } else {
+      ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse(status = 404, developerMessage = "Transaction with ID $id not found."))
+    }
   }
 }

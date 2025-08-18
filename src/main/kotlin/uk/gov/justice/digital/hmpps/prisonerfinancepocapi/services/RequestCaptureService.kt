@@ -39,7 +39,6 @@ class RequestCaptureService(
     var caseloadId: String? = null
     var requestTypeIdentifier: String?
     var transactionTimestamp: LocalDateTime? = null
-    var offenderId: Long? = null
 
     when (requestBodyObject) {
       is SyncOffenderTransactionRequest -> {
@@ -47,7 +46,6 @@ class RequestCaptureService(
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName
-        offenderId = requestBodyObject.offenderTransactions.first().offenderId
         // Convert the local transaction timestamp to UTC
         val localTransactionTimestamp = requestBodyObject.transactionTimestamp
         val sourceZone = ZoneId.of("Europe/London") // Assuming source system time zone is BST
@@ -81,22 +79,8 @@ class RequestCaptureService(
       requestTypeIdentifier = requestTypeIdentifier,
       body = rawBodyJson,
       transactionTimestamp = transactionTimestamp,
-      offenderId = offenderId,
     )
     return nomisSyncPayloadRepository.save(payload)
-  }
-
-  fun getCapturedNomisSyncPayloads(
-    requestType: String? = null,
-    transactionId: Long? = null,
-    requestId: UUID? = null,
-    caseloadId: String? = null,
-  ): List<NomisSyncPayload> = when {
-    requestType != null -> nomisSyncPayloadRepository.findByRequestTypeIdentifier(requestType)
-    transactionId != null -> nomisSyncPayloadRepository.findByTransactionId(transactionId)
-    requestId != null -> nomisSyncPayloadRepository.findByRequestId(requestId)
-    caseloadId != null -> nomisSyncPayloadRepository.findByCaseloadId(caseloadId)
-    else -> nomisSyncPayloadRepository.findAll()
   }
 
   fun findNomisSyncPayloadById(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findById(transactionId).orElse(null)
