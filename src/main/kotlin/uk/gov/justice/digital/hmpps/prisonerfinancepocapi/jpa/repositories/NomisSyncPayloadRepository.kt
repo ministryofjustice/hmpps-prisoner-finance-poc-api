@@ -14,15 +14,4 @@ interface NomisSyncPayloadRepository : JpaRepository<NomisSyncPayload, Long> {
   fun findByTransactionId(transactionId: Long): List<NomisSyncPayload>
   fun findByCaseloadId(caseloadId: String): List<NomisSyncPayload>
   fun findAllByTransactionTimestampBetweenAndRequestTypeIdentifier(startDate: LocalDateTime, endDate: LocalDateTime, requestTypeIdentifier: String): List<NomisSyncPayload>
-  fun findAllByOffenderIdAndTransactionTimestampBetweenAndRequestTypeIdentifier(
-    offenderId: Long,
-    startDate: LocalDateTime,
-    endDate: LocalDateTime,
-    requestTypeIdentifier: String,
-  ): List<NomisSyncPayload>
-
-  fun findAllByOffenderIdAndRequestTypeIdentifier(
-    offenderId: Long,
-    requestTypeIdentifier: String,
-  ): List<NomisSyncPayload>
 }
