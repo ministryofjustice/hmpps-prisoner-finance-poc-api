@@ -34,7 +34,6 @@ class SyncService(
     val synchronizedTransactionId = result.id ?: throw IllegalStateException("Captured payload ID cannot be null.")
 
     return SyncTransactionReceipt(
-      transactionId = request.transactionId,
       requestId = request.requestId,
       synchronizedTransactionId = synchronizedTransactionId,
       action = SyncTransactionReceipt.Action.CREATED,
@@ -49,7 +48,6 @@ class SyncService(
     val synchronizedTransactionId = result.id ?: throw IllegalStateException("Captured payload ID cannot be null.")
 
     return SyncTransactionReceipt(
-      transactionId = request.transactionId,
       requestId = request.requestId,
       synchronizedTransactionId = synchronizedTransactionId,
       action = SyncTransactionReceipt.Action.CREATED,
