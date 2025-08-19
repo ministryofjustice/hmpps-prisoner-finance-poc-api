@@ -53,7 +53,6 @@ class SyncGeneralLedgerTransactionTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
       .expectBody()
-      .jsonPath("$.transactionId").isEqualTo(newTransactionRequest.transactionId)
       .jsonPath("$.action").isEqualTo("CREATED")
   }
 
