@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransa
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.LocalDate
+import java.util.UUID
 
 @Tag(name = TAG_NOMIS_SYNC)
 @RestController
@@ -233,7 +234,7 @@ class SyncController(
   )
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
-  fun getGeneralLedgerTransactionById(@PathVariable id: Long): ResponseEntity<Any> {
+  fun getGeneralLedgerTransactionById(@PathVariable id: UUID): ResponseEntity<Any> {
     val transaction = syncService.getGeneralLedgerTransactionById(id)
     return if (transaction != null) {
       ResponseEntity.ok(transaction)
@@ -279,7 +280,7 @@ class SyncController(
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun getOffenderTransactionById(
-    @PathVariable id: Long,
+    @PathVariable id: java.util.UUID,
   ): ResponseEntity<Any> {
     val transaction = syncService.getOffenderTransactionById(id)
     return if (transaction != null) {

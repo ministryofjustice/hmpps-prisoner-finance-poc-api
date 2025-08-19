@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffend
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
 import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class SyncService(
@@ -21,7 +22,7 @@ class SyncService(
   ): SyncTransactionReceipt {
     val result = requestCaptureService.captureAndStoreRequest(request)
 
-    val synchronizedTransactionId = result.id ?: throw IllegalStateException("Captured payload ID cannot be null.")
+    val synchronizedTransactionId = result.synchronizedTransactionId ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
 
     return SyncTransactionReceipt(
       requestId = request.requestId,
@@ -35,7 +36,7 @@ class SyncService(
   ): SyncTransactionReceipt {
     val result = requestCaptureService.captureAndStoreRequest(request)
 
-    val synchronizedTransactionId = result.id ?: throw IllegalStateException("Captured payload ID cannot be null.")
+    val synchronizedTransactionId = result.synchronizedTransactionId ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
 
     return SyncTransactionReceipt(
       requestId = request.requestId,
@@ -72,8 +73,8 @@ class SyncService(
     }
   }
 
-  fun getGeneralLedgerTransactionById(transactionId: Long): SyncGeneralLedgerTransactionResponse? {
-    val payload = requestCaptureService.findNomisSyncPayloadById(transactionId)
+  fun getGeneralLedgerTransactionById(id: UUID): SyncGeneralLedgerTransactionResponse? {
+    val payload = requestCaptureService.findNomisSyncPayloadBySynchronizedTransactionId(id)
 
     if (payload != null && payload.requestTypeIdentifier == SyncGeneralLedgerTransactionRequest::class.simpleName) {
       val objectMapper = ObjectMapper()
@@ -83,7 +84,7 @@ class SyncService(
       val request = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
 
       return SyncGeneralLedgerTransactionResponse(
-        transactionId = transactionId,
+        transactionId = request.transactionId,
         description = request.description,
         reference = request.reference,
         caseloadId = request.caseloadId,
@@ -101,8 +102,8 @@ class SyncService(
     return null
   }
 
-  fun getOffenderTransactionById(transactionId: Long): SyncOffenderTransactionResponse? {
-    val payload = requestCaptureService.findNomisSyncPayloadById(transactionId)
+  fun getOffenderTransactionById(id: UUID): SyncOffenderTransactionResponse? {
+    val payload = requestCaptureService.findNomisSyncPayloadBySynchronizedTransactionId(id)
 
     if (payload != null && payload.requestTypeIdentifier == SyncOffenderTransactionRequest::class.simpleName) {
       val objectMapper = ObjectMapper()

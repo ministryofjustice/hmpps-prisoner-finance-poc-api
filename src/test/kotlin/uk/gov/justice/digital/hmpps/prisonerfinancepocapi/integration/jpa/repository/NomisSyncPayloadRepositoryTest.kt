@@ -35,9 +35,10 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     payload1 = NomisSyncPayload(
       timestamp = now.minusHours(2),
       transactionId = 1001,
-      requestId = UUID.fromString("a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1"),
+      requestId = UUID.randomUUID(),
       caseloadId = "MDI",
       requestTypeIdentifier = requestType1,
+      synchronizedTransactionId = UUID.randomUUID(),
       body = """{"transactionId":1001,"caseloadId":"MDI","offenderId":123,"eventType":"SyncOffenderTransaction"}""",
     )
     entityManager.persistAndFlush(payload1)
@@ -45,9 +46,10 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     payload2 = NomisSyncPayload(
       timestamp = now,
       transactionId = 1002,
-      requestId = UUID.fromString("a3a3a3a3-b3b3-c3c3-d3d3-e3e3e3e3e3e3"),
+      requestId = UUID.randomUUID(),
       caseloadId = "LEI",
       requestTypeIdentifier = requestType1,
+      synchronizedTransactionId = UUID.randomUUID(),
       body = """{"transactionId":1003,"caseloadId":"LEI","offenderId":456,"eventType":"SyncOffenderTransaction"}""",
     )
     entityManager.persistAndFlush(payload2)
@@ -64,6 +66,7 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
         requestId = UUID.randomUUID(),
         caseloadId = "DTI",
         requestTypeIdentifier = "NewSyncType",
+        synchronizedTransactionId = UUID.randomUUID(),
         body = """{"new":"data"}""",
       )
 
