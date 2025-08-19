@@ -9,14 +9,14 @@ import java.util.UUID
 @Schema(description = "Request body for synchronizing general ledger transactions. Please note these are for non-offender accounts only.")
 data class SyncGeneralLedgerTransactionRequest(
   @field:Schema(description = "The unique identifier for the general ledger transaction.", example = "19228028", required = true)
-  val transactionId: Long,
+  override val transactionId: Long,
 
   @field:Schema(
     description = "A unique identifier for this synchronization request. This can be used for idempotency or tracing.",
     example = "a1b2c3d4-e5f6-7890-1234-567890abcdef",
     required = true,
   )
-  val requestId: UUID,
+  override val requestId: UUID,
 
   @field:Schema(description = "A description of the general ledger transaction.", example = "General Ledger Account Transfer", required = true)
   val description: String,
@@ -76,4 +76,4 @@ data class SyncGeneralLedgerTransactionRequest(
   @field:Schema(description = "A list of general ledger entries associated with this general ledger transaction.", required = true)
   @field:Valid
   val generalLedgerEntries: List<GeneralLedgerEntry>,
-)
+) : SyncRequest

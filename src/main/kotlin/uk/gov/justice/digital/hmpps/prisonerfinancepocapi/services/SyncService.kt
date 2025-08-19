@@ -1,130 +1,79 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionResponse
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
-import java.time.LocalDate
-import java.util.UUID
 
 @Service
 class SyncService(
   private val requestCaptureService: RequestCaptureService,
+  private val syncQueryService: SyncQueryService,
+  private val objectMapper: ObjectMapper,
 ) {
-  fun syncGeneralLedgerTransaction(
-    request: SyncGeneralLedgerTransactionRequest,
+
+  private companion object {
+    private val log = LoggerFactory.getLogger(this::class.java)
+  }
+
+  fun <T : SyncRequest> syncTransaction(
+    request: T,
   ): SyncTransactionReceipt {
-    val result = requestCaptureService.captureAndStoreRequest(request)
+    val existingPayloadByRequestId = syncQueryService.findByRequestId(request.requestId)
 
-    val synchronizedTransactionId = result.synchronizedTransactionId ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
+    if (existingPayloadByRequestId != null) {
+      val synchronizedTransactionId = existingPayloadByRequestId.synchronizedTransactionId
+        ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an existing payload.")
+      return SyncTransactionReceipt(
+        requestId = request.requestId,
+        synchronizedTransactionId = synchronizedTransactionId,
+        action = SyncTransactionReceipt.Action.PROCESSED,
+      )
+    }
 
+    val existingPayloadByTransactionId = syncQueryService.findByTransactionId(request.transactionId)
+    if (existingPayloadByTransactionId != null) {
+      val synchronizedTransactionId = existingPayloadByTransactionId.synchronizedTransactionId
+        ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an existing payload.")
+
+      val newBodyJson = try {
+        objectMapper.writeValueAsString(request)
+      } catch (e: Exception) {
+        log.error("Could not serialize new request body to JSON", e)
+        "{}"
+      }
+
+      val isBodyIdentical = syncQueryService.compareJsonBodies(
+        storedJson = existingPayloadByTransactionId.body,
+        newJson = newBodyJson,
+      )
+
+      if (isBodyIdentical) {
+        return SyncTransactionReceipt(
+          requestId = request.requestId,
+          synchronizedTransactionId = synchronizedTransactionId,
+          action = SyncTransactionReceipt.Action.PROCESSED,
+        )
+      } else {
+        val updatedPayload = requestCaptureService.captureAndStoreRequest(request)
+        val newSynchronizedTransactionId = updatedPayload.synchronizedTransactionId
+          ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an updated payload.")
+        return SyncTransactionReceipt(
+          requestId = request.requestId,
+          synchronizedTransactionId = newSynchronizedTransactionId,
+          action = SyncTransactionReceipt.Action.UPDATED,
+        )
+      }
+    }
+
+    val newPayload = requestCaptureService.captureAndStoreRequest(request)
+    val synchronizedTransactionId = newPayload.synchronizedTransactionId
+      ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
     return SyncTransactionReceipt(
       requestId = request.requestId,
       synchronizedTransactionId = synchronizedTransactionId,
       action = SyncTransactionReceipt.Action.CREATED,
     )
-  }
-
-  fun syncOffenderTransaction(
-    request: SyncOffenderTransactionRequest,
-  ): SyncTransactionReceipt {
-    val result = requestCaptureService.captureAndStoreRequest(request)
-
-    val synchronizedTransactionId = result.synchronizedTransactionId ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
-
-    return SyncTransactionReceipt(
-      requestId = request.requestId,
-      synchronizedTransactionId = synchronizedTransactionId,
-      action = SyncTransactionReceipt.Action.CREATED,
-    )
-  }
-
-  fun getGeneralLedgerTransactionsByDate(startDate: LocalDate, endDate: LocalDate): List<SyncGeneralLedgerTransactionResponse> {
-    val nomisPayloads = requestCaptureService.findGeneralLedgerTransactionsByTimestampBetween(startDate, endDate)
-
-    val objectMapper = ObjectMapper()
-      .registerModule(JavaTimeModule())
-      .registerModule(KotlinModule.Builder().build())
-
-    return nomisPayloads.map { payload ->
-      val request = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
-
-      SyncGeneralLedgerTransactionResponse(
-        transactionId = payload.id!!,
-        description = request.description,
-        reference = request.reference,
-        caseloadId = request.caseloadId,
-        transactionType = request.transactionType,
-        transactionTimestamp = request.transactionTimestamp,
-        createdAt = request.createdAt,
-        createdBy = request.createdBy,
-        createdByDisplayName = request.createdByDisplayName,
-        lastModifiedAt = request.lastModifiedAt,
-        lastModifiedBy = request.lastModifiedBy,
-        lastModifiedByDisplayName = request.lastModifiedByDisplayName,
-        generalLedgerEntries = request.generalLedgerEntries,
-      )
-    }
-  }
-
-  fun getGeneralLedgerTransactionById(id: UUID): SyncGeneralLedgerTransactionResponse? {
-    val payload = requestCaptureService.findNomisSyncPayloadBySynchronizedTransactionId(id)
-
-    if (payload != null && payload.requestTypeIdentifier == SyncGeneralLedgerTransactionRequest::class.simpleName) {
-      val objectMapper = ObjectMapper()
-        .registerModule(JavaTimeModule())
-        .registerModule(KotlinModule.Builder().build())
-
-      val request = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
-
-      return SyncGeneralLedgerTransactionResponse(
-        transactionId = request.transactionId,
-        description = request.description,
-        reference = request.reference,
-        caseloadId = request.caseloadId,
-        transactionType = request.transactionType,
-        transactionTimestamp = request.transactionTimestamp,
-        createdAt = request.createdAt,
-        createdBy = request.createdBy,
-        createdByDisplayName = request.createdByDisplayName,
-        lastModifiedAt = request.lastModifiedAt,
-        lastModifiedBy = request.lastModifiedBy,
-        lastModifiedByDisplayName = request.lastModifiedByDisplayName,
-        generalLedgerEntries = request.generalLedgerEntries,
-      )
-    }
-    return null
-  }
-
-  fun getOffenderTransactionById(id: UUID): SyncOffenderTransactionResponse? {
-    val payload = requestCaptureService.findNomisSyncPayloadBySynchronizedTransactionId(id)
-
-    if (payload != null && payload.requestTypeIdentifier == SyncOffenderTransactionRequest::class.simpleName) {
-      val objectMapper = ObjectMapper()
-        .registerModule(JavaTimeModule())
-        .registerModule(KotlinModule.Builder().build())
-
-      val request = objectMapper.readValue<SyncOffenderTransactionRequest>(payload.body)
-
-      return SyncOffenderTransactionResponse(
-        transactionId = request.transactionId,
-        caseloadId = request.caseloadId,
-        transactionTimestamp = request.transactionTimestamp,
-        createdAt = request.createdAt,
-        createdBy = request.createdBy,
-        createdByDisplayName = request.createdByDisplayName,
-        lastModifiedAt = request.lastModifiedAt,
-        lastModifiedBy = request.lastModifiedBy,
-        lastModifiedByDisplayName = request.lastModifiedByDisplayName,
-        transactions = request.offenderTransactions,
-      )
-    }
-    return null
   }
 }

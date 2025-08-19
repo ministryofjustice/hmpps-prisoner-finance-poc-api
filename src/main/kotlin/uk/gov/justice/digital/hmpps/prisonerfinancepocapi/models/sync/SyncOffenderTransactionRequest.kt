@@ -13,14 +13,14 @@ data class SyncOffenderTransactionRequest(
     example = "19228028",
     required = true,
   )
-  val transactionId: Long,
+  override val transactionId: Long,
 
   @field:Schema(
     description = "A unique identifier for this synchronization request. This can be used for idempotency or tracing.",
     example = "a1b2c3d4-e5f6-7890-1234-567890abcdef",
     required = true,
   )
-  val requestId: UUID,
+  override val requestId: UUID,
 
   @field:Schema(
     description = "The ID of the caseload associated with this transaction.",
@@ -82,4 +82,4 @@ data class SyncOffenderTransactionRequest(
   )
   @field:Valid
   val offenderTransactions: List<OffenderTransaction>,
-)
+) : SyncRequest

@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPa
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
-import java.time.LocalDate
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncRequest
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -24,8 +24,8 @@ class RequestCaptureService(
     private val log = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun captureAndStoreRequest(
-    requestBodyObject: Any,
+  fun <T : SyncRequest> captureAndStoreRequest(
+    requestBodyObject: T,
   ): NomisSyncPayload {
     val rawBodyJson = try {
       objectMapper.writeValueAsString(requestBodyObject)
@@ -34,31 +34,28 @@ class RequestCaptureService(
       "{}"
     }
 
-    var transactionId: Long? = null
-    var requestId: UUID? = null
     var caseloadId: String? = null
     var requestTypeIdentifier: String?
     var transactionTimestamp: LocalDateTime? = null
 
     when (requestBodyObject) {
       is SyncOffenderTransactionRequest -> {
-        transactionId = requestBodyObject.transactionId
-        requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName
-        // Convert the local transaction timestamp to UTC
         val localTransactionTimestamp = requestBodyObject.transactionTimestamp
-        val sourceZone = ZoneId.of("Europe/London") // Assuming source system time zone is BST
+        val sourceZone = ZoneId.of("Europe/London")
         transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
           .withZoneSameInstant(ZoneOffset.UTC)
           .toLocalDateTime()
       }
       is SyncGeneralLedgerTransactionRequest -> {
-        transactionId = requestBodyObject.transactionId
-        requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName
-
+        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
+        val sourceZone = ZoneId.of("Europe/London")
+        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
+          .withZoneSameInstant(ZoneOffset.UTC)
+          .toLocalDateTime()
       }
       else -> {
         requestTypeIdentifier = requestBodyObject::class.simpleName
@@ -68,31 +65,14 @@ class RequestCaptureService(
 
     val payload = NomisSyncPayload(
       timestamp = LocalDateTime.now(ZoneOffset.UTC),
-      transactionId = transactionId,
+      transactionId = requestBodyObject.transactionId,
       synchronizedTransactionId = UUID.randomUUID(),
-      requestId = requestId,
+      requestId = requestBodyObject.requestId,
       caseloadId = caseloadId,
       requestTypeIdentifier = requestTypeIdentifier,
       body = rawBodyJson,
       transactionTimestamp = transactionTimestamp,
     )
     return nomisSyncPayloadRepository.save(payload)
-  }
-
-  fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findBySynchronizedTransactionId(synchronizedTransactionId)
-
-
-  fun findGeneralLedgerTransactionsByTimestampBetween(startDate: LocalDate, endDate: LocalDate): List<NomisSyncPayload> {
-    val userZone = ZoneId.of("Europe/London")
-
-    // Convert the start and end of the user's local day to UTC
-    val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
-    val endOfUserDayInUtc = ZonedDateTime.of(endDate.plusDays(1).atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
-
-    return nomisSyncPayloadRepository.findAllByTransactionTimestampBetweenAndRequestTypeIdentifier(
-      startOfUserDayInUtc.toLocalDateTime(),
-      endOfUserDayInUtc.toLocalDateTime(),
-      SyncGeneralLedgerTransactionRequest::class.simpleName!!,
-    )
   }
 }
