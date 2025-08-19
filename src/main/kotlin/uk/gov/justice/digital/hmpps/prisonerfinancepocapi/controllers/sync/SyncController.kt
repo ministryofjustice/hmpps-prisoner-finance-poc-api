@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGenera
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncQueryService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.LocalDate
@@ -36,7 +37,8 @@ import java.util.UUID
 @Tag(name = TAG_NOMIS_SYNC)
 @RestController
 class SyncController(
-  @Autowired private val syncService: SyncService,
+  @param:Autowired private val syncService: SyncService,
+  @param:Autowired private val syncQueryService: SyncQueryService,
 ) {
 
   @Operation(
@@ -88,10 +90,11 @@ class SyncController(
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun postOffenderTransaction(@Valid @RequestBody request: SyncOffenderTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
-    val receipt = syncService.syncOffenderTransaction(request)
+    val receipt = syncService.syncTransaction(request)
     return when (receipt.action) {
       SyncTransactionReceipt.Action.CREATED -> ResponseEntity.status(HttpStatus.CREATED).body(receipt)
       SyncTransactionReceipt.Action.UPDATED -> ResponseEntity.ok(receipt)
+      SyncTransactionReceipt.Action.PROCESSED -> ResponseEntity.ok(receipt)
     }
   }
 
@@ -144,11 +147,12 @@ class SyncController(
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun postGeneralLedgerTransaction(@Valid @RequestBody request: SyncGeneralLedgerTransactionRequest): ResponseEntity<SyncTransactionReceipt> {
-    val receipt = syncService.syncGeneralLedgerTransaction(request)
+    val receipt = syncService.syncTransaction(request)
 
     return when (receipt.action) {
       SyncTransactionReceipt.Action.CREATED -> ResponseEntity.status(HttpStatus.CREATED).body(receipt)
       SyncTransactionReceipt.Action.UPDATED -> ResponseEntity.ok(receipt)
+      SyncTransactionReceipt.Action.PROCESSED -> ResponseEntity.ok(receipt)
     }
   }
 
@@ -192,7 +196,7 @@ class SyncController(
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
   ): ResponseEntity<SyncGeneralLedgerTransactionListResponse> {
-    val transactions = syncService.getGeneralLedgerTransactionsByDate(startDate, endDate)
+    val transactions = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate)
 
     val response = SyncGeneralLedgerTransactionListResponse(transactions)
     return ResponseEntity.ok(response)
@@ -235,7 +239,7 @@ class SyncController(
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun getGeneralLedgerTransactionById(@PathVariable id: UUID): ResponseEntity<Any> {
-    val transaction = syncService.getGeneralLedgerTransactionById(id)
+    val transaction = syncQueryService.getGeneralLedgerTransactionById(id)
     return if (transaction != null) {
       ResponseEntity.ok(transaction)
     } else {
@@ -280,9 +284,9 @@ class SyncController(
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun getOffenderTransactionById(
-    @PathVariable id: java.util.UUID,
+    @PathVariable id: UUID,
   ): ResponseEntity<Any> {
-    val transaction = syncService.getOffenderTransactionById(id)
+    val transaction = syncQueryService.getOffenderTransactionById(id)
     return if (transaction != null) {
       ResponseEntity.ok(transaction)
     } else {

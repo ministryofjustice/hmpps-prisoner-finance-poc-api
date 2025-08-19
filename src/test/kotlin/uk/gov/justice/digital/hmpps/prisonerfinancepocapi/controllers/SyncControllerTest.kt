@@ -17,6 +17,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTr
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncQueryService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.SyncService
 import java.time.LocalDateTime
 import java.util.UUID
@@ -26,6 +27,9 @@ class SyncControllerTest {
 
   @Mock
   private lateinit var syncService: SyncService
+
+  @Mock
+  private lateinit var syncQueryService: SyncQueryService
 
   @InjectMocks
   private lateinit var syncController: SyncController
@@ -96,7 +100,7 @@ class SyncControllerTest {
         synchronizedTransactionId = UUID.randomUUID(),
         action = SyncTransactionReceipt.Action.CREATED,
       )
-      `when`(syncService.syncOffenderTransaction(dummyOffenderTransactionRequest)).thenReturn(receipt)
+      `when`(syncService.syncTransaction(dummyOffenderTransactionRequest)).thenReturn(receipt)
 
       val response = syncController.postOffenderTransaction(dummyOffenderTransactionRequest)
 
@@ -108,10 +112,10 @@ class SyncControllerTest {
     fun `should return OK status when offender transaction is updated`() {
       val receipt = SyncTransactionReceipt(
         requestId = UUID.randomUUID(),
-        synchronizedTransactionId =  UUID.randomUUID(),
+        synchronizedTransactionId = UUID.randomUUID(),
         action = SyncTransactionReceipt.Action.UPDATED,
       )
-      `when`(syncService.syncOffenderTransaction(dummyOffenderTransactionRequest)).thenReturn(receipt)
+      `when`(syncService.syncTransaction(dummyOffenderTransactionRequest)).thenReturn(receipt)
 
       val response = syncController.postOffenderTransaction(dummyOffenderTransactionRequest)
 
@@ -127,10 +131,10 @@ class SyncControllerTest {
     fun `should return CREATED status when general ledger transaction is new`() {
       val receipt = SyncTransactionReceipt(
         requestId = UUID.randomUUID(),
-        synchronizedTransactionId =  UUID.randomUUID(),
+        synchronizedTransactionId = UUID.randomUUID(),
         action = SyncTransactionReceipt.Action.CREATED,
       )
-      `when`(syncService.syncGeneralLedgerTransaction(dummyGeneralLedgerTransactionRequest)).thenReturn(receipt)
+      `when`(syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)).thenReturn(receipt)
 
       val response = syncController.postGeneralLedgerTransaction(dummyGeneralLedgerTransactionRequest)
 
@@ -145,7 +149,7 @@ class SyncControllerTest {
         synchronizedTransactionId = UUID.randomUUID(),
         action = SyncTransactionReceipt.Action.UPDATED,
       )
-      `when`(syncService.syncGeneralLedgerTransaction(dummyGeneralLedgerTransactionRequest)).thenReturn(receipt)
+      `when`(syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)).thenReturn(receipt)
 
       val response = syncController.postGeneralLedgerTransaction(dummyGeneralLedgerTransactionRequest)
 
