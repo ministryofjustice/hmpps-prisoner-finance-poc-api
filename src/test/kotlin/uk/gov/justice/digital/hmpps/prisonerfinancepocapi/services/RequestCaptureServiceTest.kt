@@ -112,6 +112,7 @@ class RequestCaptureServiceTest {
           requestId = null,
           caseloadId = null,
           requestTypeIdentifier = "Dummy",
+          synchronizedTransactionId = UUID.fromString("a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1"),
           body = "{}",
         ),
       )
@@ -172,6 +173,7 @@ class RequestCaptureServiceTest {
         timestamp = LocalDateTime.now(ZoneOffset.UTC).minusDays(1),
         transactionId = 101,
         requestId = UUID.randomUUID(),
+        synchronizedTransactionId = UUID.randomUUID(),
         caseloadId = "LEI",
         requestTypeIdentifier = "SyncOffenderTransaction",
         body = "{}",
@@ -181,6 +183,7 @@ class RequestCaptureServiceTest {
         timestamp = LocalDateTime.now(ZoneOffset.UTC).minusHours(1),
         transactionId = 102,
         requestId = UUID.randomUUID(),
+        synchronizedTransactionId = UUID.randomUUID(),
         caseloadId = "BRI",
         requestTypeIdentifier = "SyncGeneralLedgerBalance",
         body = "{}",

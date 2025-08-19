@@ -58,12 +58,7 @@ class RequestCaptureService(
         requestId = requestBodyObject.requestId
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName
-        // Convert the local transaction timestamp to UTC
-        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
-        val sourceZone = ZoneId.of("Europe/London") // Assuming source system time zone is BST
-        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
-          .withZoneSameInstant(ZoneOffset.UTC)
-          .toLocalDateTime()
+
       }
       else -> {
         requestTypeIdentifier = requestBodyObject::class.simpleName
@@ -74,6 +69,7 @@ class RequestCaptureService(
     val payload = NomisSyncPayload(
       timestamp = LocalDateTime.now(ZoneOffset.UTC),
       transactionId = transactionId,
+      synchronizedTransactionId = UUID.randomUUID(),
       requestId = requestId,
       caseloadId = caseloadId,
       requestTypeIdentifier = requestTypeIdentifier,
@@ -83,7 +79,8 @@ class RequestCaptureService(
     return nomisSyncPayloadRepository.save(payload)
   }
 
-  fun findNomisSyncPayloadById(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findById(transactionId).orElse(null)
+  fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findBySynchronizedTransactionId(synchronizedTransactionId)
+
 
   fun findGeneralLedgerTransactionsByTimestampBetween(startDate: LocalDate, endDate: LocalDate): List<NomisSyncPayload> {
     val userZone = ZoneId.of("Europe/London")
