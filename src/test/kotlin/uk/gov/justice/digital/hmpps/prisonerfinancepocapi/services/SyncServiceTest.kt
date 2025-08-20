@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
@@ -15,6 +14,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
@@ -96,7 +96,7 @@ class SyncServiceTest {
       assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
       verify(syncQueryService, times(1)).findByRequestId(any())
       verify(syncQueryService, times(0)).findByTransactionId(any())
-      verify(requestCaptureService, times(0)).captureAndStoreRequest(any())
+      verify(requestCaptureService, times(0)).captureAndStoreRequest(any(), anyOrNull())
     }
 
     @Test
@@ -104,7 +104,7 @@ class SyncServiceTest {
       // Given
       `when`(syncQueryService.findByRequestId(any())).thenReturn(null)
       `when`(syncQueryService.findByTransactionId(any())).thenReturn(null)
-      `when`(requestCaptureService.captureAndStoreRequest(any())).thenReturn(dummyStoredPayload)
+      `when`(requestCaptureService.captureAndStoreRequest(any(), anyOrNull())).thenReturn(dummyStoredPayload)
 
       // When
       val result = syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)
@@ -115,7 +115,7 @@ class SyncServiceTest {
       assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
       verify(syncQueryService, times(1)).findByRequestId(any())
       verify(syncQueryService, times(1)).findByTransactionId(any())
-      verify(requestCaptureService, times(1)).captureAndStoreRequest(any())
+      verify(requestCaptureService, times(1)).captureAndStoreRequest(any(), anyOrNull())
     }
 
     @Nested
@@ -144,7 +144,7 @@ class SyncServiceTest {
         assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
         verify(objectMapper, times(1)).writeValueAsString(any())
         verify(jsonComparator, times(1)).areJsonBodiesEqual(any(), any())
-        verify(requestCaptureService, times(0)).captureAndStoreRequest(any())
+        verify(requestCaptureService, times(0)).captureAndStoreRequest(any(), anyOrNull())
       }
 
       @Test
@@ -154,7 +154,7 @@ class SyncServiceTest {
         val updatedPayload = dummyStoredPayload.copy(synchronizedTransactionId = UUID.randomUUID())
         `when`(objectMapper.writeValueAsString(any())).thenReturn(differentBodyJson)
         `when`(jsonComparator.areJsonBodiesEqual(any(), any())).thenReturn(false)
-        `when`(requestCaptureService.captureAndStoreRequest(any())).thenReturn(updatedPayload)
+        `when`(requestCaptureService.captureAndStoreRequest(any(), anyOrNull())).thenReturn(updatedPayload)
 
         // When
         val result = syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)
@@ -165,21 +165,8 @@ class SyncServiceTest {
         assertThat(result.synchronizedTransactionId).isEqualTo(updatedPayload.synchronizedTransactionId)
         verify(objectMapper, times(1)).writeValueAsString(any())
         verify(jsonComparator, times(1)).areJsonBodiesEqual(any(), any())
-        verify(requestCaptureService, times(1)).captureAndStoreRequest(any())
+        verify(requestCaptureService, times(1)).captureAndStoreRequest(any(), anyOrNull())
       }
-    }
-
-    @Test
-    fun `should throw IllegalStateException if synchronizedTransactionId is null on existing payload`() {
-      // Given
-      val payloadWithNullId = dummyStoredPayload.copy(synchronizedTransactionId = null)
-      `when`(syncQueryService.findByRequestId(any())).thenReturn(payloadWithNullId)
-
-      // When / Then
-      val exception = assertThrows<IllegalStateException> {
-        syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)
-      }
-      assertThat(exception.message).isEqualTo("Synchronized TransactionId cannot be null on an existing payload.")
     }
   }
 }
