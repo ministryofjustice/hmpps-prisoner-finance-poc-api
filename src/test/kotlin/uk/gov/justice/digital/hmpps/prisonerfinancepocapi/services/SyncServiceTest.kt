@@ -33,6 +33,9 @@ class SyncServiceTest {
   private lateinit var syncQueryService: SyncQueryService
 
   @Mock
+  private lateinit var jsonComparator: JsonComparator
+
+  @Mock
   private lateinit var objectMapper: ObjectMapper
 
   @InjectMocks
@@ -130,7 +133,7 @@ class SyncServiceTest {
         // Given
         val newBodyJson = "{\"transactionId\":19228029,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\"}"
         `when`(objectMapper.writeValueAsString(any())).thenReturn(newBodyJson)
-        `when`(syncQueryService.compareJsonBodies(any(), any())).thenReturn(true)
+        `when`(jsonComparator.areJsonBodiesEqual(any(), any())).thenReturn(true)
 
         // When
         val result = syncService.syncTransaction(dummyGeneralLedgerTransactionRequest)
@@ -140,7 +143,7 @@ class SyncServiceTest {
         assertThat(result.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
         assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
         verify(objectMapper, times(1)).writeValueAsString(any())
-        verify(syncQueryService, times(1)).compareJsonBodies(any(), any())
+        verify(jsonComparator, times(1)).areJsonBodiesEqual(any(), any())
         verify(requestCaptureService, times(0)).captureAndStoreRequest(any())
       }
 
@@ -150,7 +153,7 @@ class SyncServiceTest {
         val differentBodyJson = "{\"transactionId\":19228029,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\",\"newField\":\"value\"}"
         val updatedPayload = dummyStoredPayload.copy(synchronizedTransactionId = UUID.randomUUID())
         `when`(objectMapper.writeValueAsString(any())).thenReturn(differentBodyJson)
-        `when`(syncQueryService.compareJsonBodies(any(), any())).thenReturn(false)
+        `when`(jsonComparator.areJsonBodiesEqual(any(), any())).thenReturn(false)
         `when`(requestCaptureService.captureAndStoreRequest(any())).thenReturn(updatedPayload)
 
         // When
@@ -161,7 +164,7 @@ class SyncServiceTest {
         assertThat(result.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
         assertThat(result.synchronizedTransactionId).isEqualTo(updatedPayload.synchronizedTransactionId)
         verify(objectMapper, times(1)).writeValueAsString(any())
-        verify(syncQueryService, times(1)).compareJsonBodies(any(), any())
+        verify(jsonComparator, times(1)).areJsonBodiesEqual(any(), any())
         verify(requestCaptureService, times(1)).captureAndStoreRequest(any())
       }
     }

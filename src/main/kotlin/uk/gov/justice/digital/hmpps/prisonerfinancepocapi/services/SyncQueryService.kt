@@ -19,30 +19,12 @@ import java.util.UUID
 @Service
 class SyncQueryService(
   private val nomisSyncPayloadRepository: NomisSyncPayloadRepository,
-  private val objectMapper: ObjectMapper,
   private val responseMapperService: ResponseMapperService,
 ) {
-
-  private companion object {
-    private val log = LoggerFactory.getLogger(this::class.java)
-  }
 
   fun findByRequestId(requestId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findByRequestId(requestId).firstOrNull()
 
   fun findByTransactionId(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findByTransactionId(transactionId).firstOrNull()
-
-  fun compareJsonBodies(storedJson: String, newJson: String): Boolean = try {
-    val storedMap = objectMapper.readValue<Map<String, Any?>>(storedJson)
-    val newMap = objectMapper.readValue<Map<String, Any?>>(newJson)
-
-    val storedMapWithoutIgnoredFields = storedMap.toMutableMap().apply { remove("requestId") }
-    val newMapWithoutIgnoredFields = newMap.toMutableMap().apply { remove("requestId") }
-
-    storedMapWithoutIgnoredFields == newMapWithoutIgnoredFields
-  } catch (e: Exception) {
-    log.error("Failed to compare JSON bodies", e)
-    false
-  }
 
   fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findBySynchronizedTransactionId(synchronizedTransactionId)
 

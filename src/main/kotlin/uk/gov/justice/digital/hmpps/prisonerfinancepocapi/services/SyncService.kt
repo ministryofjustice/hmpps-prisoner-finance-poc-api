@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransa
 class SyncService(
   private val requestCaptureService: RequestCaptureService,
   private val syncQueryService: SyncQueryService,
+  private val jsonComparator: JsonComparator,
   private val objectMapper: ObjectMapper,
 ) {
 
@@ -44,7 +45,7 @@ class SyncService(
         "{}"
       }
 
-      val isBodyIdentical = syncQueryService.compareJsonBodies(
+      val isBodyIdentical = jsonComparator.areJsonBodiesEqual(
         storedJson = existingPayloadByTransactionId.body,
         newJson = newBodyJson,
       )
