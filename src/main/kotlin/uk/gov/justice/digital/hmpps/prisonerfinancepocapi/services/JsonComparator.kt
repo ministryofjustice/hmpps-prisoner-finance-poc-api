@@ -24,8 +24,7 @@ class JsonComparator(private val objectMapper: ObjectMapper) {
     }
   }
 
-  private fun jsonToMap(jsonString: String): Map<String, Any?> =
-    objectMapper.readValue(jsonString)
+  private fun jsonToMap(jsonString: String): Map<String, Any?> = objectMapper.readValue(jsonString)
 
   fun compareMaps(map1: Map<String, Any?>, map2: Map<String, Any?>): Boolean {
     val map1Cleaned = map1.filterKeys { it !in ignoredFields }
