@@ -19,37 +19,37 @@ class ResponseMapperService {
     .registerModule(KotlinModule.Builder().build())
 
   fun mapToGeneralLedgerTransactionResponse(payload: NomisSyncPayload): SyncGeneralLedgerTransactionResponse {
-    val request = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
+    val result = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
     return SyncGeneralLedgerTransactionResponse(
-      transactionId = request.transactionId,
-      description = request.description,
-      reference = request.reference,
-      caseloadId = request.caseloadId,
-      transactionType = request.transactionType,
-      transactionTimestamp = request.transactionTimestamp,
-      createdAt = request.createdAt,
-      createdBy = request.createdBy,
-      createdByDisplayName = request.createdByDisplayName,
-      lastModifiedAt = request.lastModifiedAt,
-      lastModifiedBy = request.lastModifiedBy,
-      lastModifiedByDisplayName = request.lastModifiedByDisplayName,
-      generalLedgerEntries = request.generalLedgerEntries,
+      synchronizedTransactionId = payload.synchronizedTransactionId!!,
+      description = result.description,
+      reference = result.reference,
+      caseloadId = result.caseloadId,
+      transactionType = result.transactionType,
+      transactionTimestamp = result.transactionTimestamp,
+      createdAt = result.createdAt,
+      createdBy = result.createdBy,
+      createdByDisplayName = result.createdByDisplayName,
+      lastModifiedAt = result.lastModifiedAt,
+      lastModifiedBy = result.lastModifiedBy,
+      lastModifiedByDisplayName = result.lastModifiedByDisplayName,
+      generalLedgerEntries = result.generalLedgerEntries,
     )
   }
 
   fun mapToOffenderTransactionResponse(payload: NomisSyncPayload): SyncOffenderTransactionResponse {
-    val request = objectMapper.readValue<SyncOffenderTransactionRequest>(payload.body)
+    val result = objectMapper.readValue<SyncOffenderTransactionRequest>(payload.body)
     return SyncOffenderTransactionResponse(
-      transactionId = request.transactionId,
-      caseloadId = request.caseloadId,
-      transactionTimestamp = request.transactionTimestamp,
-      createdAt = request.createdAt,
-      createdBy = request.createdBy,
-      createdByDisplayName = request.createdByDisplayName,
-      lastModifiedAt = request.lastModifiedAt,
-      lastModifiedBy = request.lastModifiedBy,
-      lastModifiedByDisplayName = request.lastModifiedByDisplayName,
-      transactions = request.offenderTransactions,
+      synchronizedTransactionId = payload.synchronizedTransactionId!!,
+      caseloadId = result.caseloadId,
+      transactionTimestamp = result.transactionTimestamp,
+      createdAt = result.createdAt,
+      createdBy = result.createdBy,
+      createdByDisplayName = result.createdByDisplayName,
+      lastModifiedAt = result.lastModifiedAt,
+      lastModifiedBy = result.lastModifiedBy,
+      lastModifiedByDisplayName = result.lastModifiedByDisplayName,
+      transactions = result.offenderTransactions,
     )
   }
 }
