@@ -24,20 +24,15 @@ class SyncService(
     val existingPayloadByRequestId = syncQueryService.findByRequestId(request.requestId)
 
     if (existingPayloadByRequestId != null) {
-      val synchronizedTransactionId = existingPayloadByRequestId.synchronizedTransactionId
-        ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an existing payload.")
       return SyncTransactionReceipt(
         requestId = request.requestId,
-        synchronizedTransactionId = synchronizedTransactionId,
+        synchronizedTransactionId = existingPayloadByRequestId.synchronizedTransactionId,
         action = SyncTransactionReceipt.Action.PROCESSED,
       )
     }
 
     val existingPayloadByTransactionId = syncQueryService.findByTransactionId(request.transactionId)
     if (existingPayloadByTransactionId != null) {
-      val synchronizedTransactionId = existingPayloadByTransactionId.synchronizedTransactionId
-        ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an existing payload.")
-
       val newBodyJson = try {
         objectMapper.writeValueAsString(request)
       } catch (e: Exception) {
@@ -51,18 +46,21 @@ class SyncService(
       )
 
       if (isBodyIdentical) {
+        // If bodies are identical, we don't need to create a new record.
         return SyncTransactionReceipt(
           requestId = request.requestId,
-          synchronizedTransactionId = synchronizedTransactionId,
+          synchronizedTransactionId = existingPayloadByTransactionId.synchronizedTransactionId,
           action = SyncTransactionReceipt.Action.PROCESSED,
         )
       } else {
-        val updatedPayload = requestCaptureService.captureAndStoreRequest(request)
-        val newSynchronizedTransactionId = updatedPayload.synchronizedTransactionId
-          ?: throw IllegalStateException("Synchronized TransactionId cannot be null on an updated payload.")
+        // If bodies are different, save the new record and use the existing synchronizedTransactionId.
+        val newPayload = requestCaptureService.captureAndStoreRequest(
+          request,
+          existingPayloadByTransactionId.synchronizedTransactionId,
+        )
         return SyncTransactionReceipt(
           requestId = request.requestId,
-          synchronizedTransactionId = newSynchronizedTransactionId,
+          synchronizedTransactionId = newPayload.synchronizedTransactionId,
           action = SyncTransactionReceipt.Action.UPDATED,
         )
       }

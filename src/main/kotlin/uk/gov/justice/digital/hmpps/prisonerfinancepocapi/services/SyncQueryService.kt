@@ -23,7 +23,7 @@ class SyncQueryService(
 
   fun findByTransactionId(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findByTransactionId(transactionId).firstOrNull()
 
-  fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findBySynchronizedTransactionId(synchronizedTransactionId)
+  fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(synchronizedTransactionId)
 
   fun findGeneralLedgerTransactionsByTimestampBetween(startDate: LocalDate, endDate: LocalDate): List<NomisSyncPayload> {
     val userZone = ZoneId.of("Europe/London")

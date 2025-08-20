@@ -26,6 +26,7 @@ class RequestCaptureService(
 
   fun <T : SyncRequest> captureAndStoreRequest(
     requestBodyObject: T,
+    synchronizedTransactionId: UUID? = null,
   ): NomisSyncPayload {
     val rawBodyJson = try {
       objectMapper.writeValueAsString(requestBodyObject)
@@ -66,7 +67,7 @@ class RequestCaptureService(
     val payload = NomisSyncPayload(
       timestamp = LocalDateTime.now(ZoneOffset.UTC),
       transactionId = requestBodyObject.transactionId,
-      synchronizedTransactionId = UUID.randomUUID(),
+      synchronizedTransactionId = synchronizedTransactionId ?: UUID.randomUUID(),
       requestId = requestBodyObject.requestId,
       caseloadId = caseloadId,
       requestTypeIdentifier = requestTypeIdentifier,

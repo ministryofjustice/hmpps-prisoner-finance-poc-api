@@ -102,36 +102,41 @@ class RequestCaptureServiceTest {
   @DisplayName("captureAndStoreRequest")
   inner class CaptureAndStoreRequest {
 
+    private val mockedSynchronizedTransactionId = UUID.fromString("a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1")
+
     @BeforeEach
     fun setupSaveMock() {
-      `when`(nomisSyncPayloadRepository.save(any())).thenReturn(
+      // Return a new NomisSyncPayload with a mocked ID for the save operation
+      `when`(nomisSyncPayloadRepository.save(any())).thenAnswer { invocation ->
+        val payloadToSave = invocation.getArgument<NomisSyncPayload>(0)
         NomisSyncPayload(
           id = 1L,
-          timestamp = LocalDateTime.now(ZoneOffset.UTC),
-          transactionId = null,
-          requestId = null,
-          caseloadId = null,
-          requestTypeIdentifier = "Dummy",
-          synchronizedTransactionId = UUID.fromString("a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1"),
-          body = "{}",
-        ),
-      )
+          timestamp = payloadToSave.timestamp,
+          transactionId = payloadToSave.transactionId,
+          requestId = payloadToSave.requestId,
+          synchronizedTransactionId = payloadToSave.synchronizedTransactionId,
+          caseloadId = payloadToSave.caseloadId,
+          requestTypeIdentifier = payloadToSave.requestTypeIdentifier,
+          body = payloadToSave.body,
+          transactionTimestamp = payloadToSave.transactionTimestamp,
+        )
+      }
     }
 
     @Test
-    fun `should serialize and store SyncOffenderTransactionRequest with correct metadata`() {
+    fun `should serialize and store SyncOffenderTransactionRequest with a newly generated synchronized ID`() {
       val expectedJson = """{"some":"json","from":"offenderTransaction"}"""
       `when`(objectMapper.writeValueAsString(dummyOffenderTransactionRequest)).thenReturn(expectedJson)
 
       val result = requestCaptureService.captureAndStoreRequest(dummyOffenderTransactionRequest)
 
-      verify(objectMapper, times(1)).writeValueAsString(dummyOffenderTransactionRequest)
       verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
-
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
-      assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isNotNull()
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
+
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
       assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
@@ -141,19 +146,61 @@ class RequestCaptureServiceTest {
     }
 
     @Test
-    fun `should serialize and store SyncGeneralLedgerTransactionRequest with correct metadata`() {
+    fun `should serialize and store SyncOffenderTransactionRequest using a provided synchronized ID`() {
+      val expectedJson = """{"some":"json","from":"offenderTransaction"}"""
+      `when`(objectMapper.writeValueAsString(dummyOffenderTransactionRequest)).thenReturn(expectedJson)
+
+      val result = requestCaptureService.captureAndStoreRequest(dummyOffenderTransactionRequest, mockedSynchronizedTransactionId)
+
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
+      val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
+
+      assertThat(result.id).isEqualTo(1L)
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isEqualTo(mockedSynchronizedTransactionId)
+
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
+      assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
+      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `should serialize and store SyncGeneralLedgerTransactionRequest with a newly generated synchronized ID`() {
       val expectedJson = """{"some":"json","from":"generalLedgerTransaction"}"""
       `when`(objectMapper.writeValueAsString(dummyGeneralLedgerTransactionRequest)).thenReturn(expectedJson)
 
       val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerTransactionRequest)
 
-      verify(objectMapper, times(1)).writeValueAsString(dummyGeneralLedgerTransactionRequest)
       verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
-
       val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
-      assertThat(capturedPayloadSentToRepo.id).isNull()
 
       assertThat(result.id).isEqualTo(1L)
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isNotNull()
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
+
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
+      assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
+      assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `should serialize and store SyncGeneralLedgerTransactionRequest using a provided synchronized ID`() {
+      val expectedJson = """{"some":"json","from":"generalLedgerTransaction"}"""
+      `when`(objectMapper.writeValueAsString(dummyGeneralLedgerTransactionRequest)).thenReturn(expectedJson)
+
+      val result = requestCaptureService.captureAndStoreRequest(dummyGeneralLedgerTransactionRequest, mockedSynchronizedTransactionId)
+
+      verify(nomisSyncPayloadRepository, times(1)).save(nomisSyncPayloadCaptor.capture())
+      val capturedPayloadSentToRepo = nomisSyncPayloadCaptor.value
+
+      assertThat(result.id).isEqualTo(1L)
+      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isEqualTo(mockedSynchronizedTransactionId)
+
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
       assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)

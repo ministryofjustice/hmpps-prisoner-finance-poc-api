@@ -24,7 +24,7 @@ data class NomisSyncPayload(
   val transactionId: Long?,
 
   @Column(name = "synchronized_transaction_id")
-  val synchronizedTransactionId: UUID?,
+  val synchronizedTransactionId: UUID,
 
   @Column(name = "request_id")
   val requestId: UUID?,
