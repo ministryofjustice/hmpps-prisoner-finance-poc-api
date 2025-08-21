@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTr
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionResponse
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
@@ -104,6 +105,7 @@ class SyncControllerTest {
   fun setup() {
     offenderTransactionResponse = SyncOffenderTransactionResponse(
       synchronizedTransactionId = UUID.randomUUID(),
+      legacyTransactionId = 123L,
       caseloadId = "GMI",
       transactionTimestamp = LocalDateTime.now(),
       createdAt = LocalDateTime.now(),
@@ -117,6 +119,7 @@ class SyncControllerTest {
 
     generalLedgerTransactionResponse = SyncGeneralLedgerTransactionResponse(
       synchronizedTransactionId = UUID.randomUUID(),
+      legacyTransactionId = 456L,
       description = "Test Transaction",
       reference = "REF123",
       caseloadId = "GMI",
@@ -214,6 +217,34 @@ class SyncControllerTest {
       assertThat(response.body).isInstanceOf(SyncGeneralLedgerTransactionListResponse::class.java)
       assertThat(response.body?.transactions).hasSize(1)
       assertThat(response.body?.transactions).isEqualTo(transactions)
+    }
+  }
+
+  @Nested
+  @DisplayName("getOffenderTransactionsByDate")
+  inner class GetOffenderTransactionsByDate {
+    @Test
+    fun `should return a list of offender transactions and OK status`() {
+      val startDate = LocalDate.of(2025, 1, 1)
+      val endDate = LocalDate.of(2025, 1, 31)
+      val transactions = listOf(offenderTransactionResponse)
+      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate)).thenReturn(transactions)
+      val response = syncController.getOffenderTransactionsByDate(startDate, endDate)
+      assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+      assertThat(response.body).isInstanceOf(SyncOffenderTransactionListResponse::class.java)
+      assertThat(response.body?.offenderTransactions).hasSize(1)
+      assertThat(response.body?.offenderTransactions).isEqualTo(transactions)
+    }
+
+    @Test
+    fun `should return an empty list and OK status when no offender transactions are found`() {
+      val startDate = LocalDate.of(2025, 1, 1)
+      val endDate = LocalDate.of(2025, 1, 31)
+      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate)).thenReturn(emptyList())
+      val response = syncController.getOffenderTransactionsByDate(startDate, endDate)
+      assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+      assertThat(response.body).isInstanceOf(SyncOffenderTransactionListResponse::class.java)
+      assertThat(response.body?.offenderTransactions).isEmpty()
     }
   }
 

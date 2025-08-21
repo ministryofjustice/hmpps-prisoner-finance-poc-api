@@ -21,7 +21,8 @@ class ResponseMapperService {
   fun mapToGeneralLedgerTransactionResponse(payload: NomisSyncPayload): SyncGeneralLedgerTransactionResponse {
     val result = objectMapper.readValue<SyncGeneralLedgerTransactionRequest>(payload.body)
     return SyncGeneralLedgerTransactionResponse(
-      synchronizedTransactionId = payload.synchronizedTransactionId!!,
+      synchronizedTransactionId = payload.synchronizedTransactionId,
+      legacyTransactionId = payload.legacyTransactionId,
       description = result.description,
       reference = result.reference,
       caseloadId = result.caseloadId,
@@ -40,7 +41,8 @@ class ResponseMapperService {
   fun mapToOffenderTransactionResponse(payload: NomisSyncPayload): SyncOffenderTransactionResponse {
     val result = objectMapper.readValue<SyncOffenderTransactionRequest>(payload.body)
     return SyncOffenderTransactionResponse(
-      synchronizedTransactionId = payload.synchronizedTransactionId!!,
+      synchronizedTransactionId = payload.synchronizedTransactionId,
+      legacyTransactionId = payload.legacyTransactionId,
       caseloadId = result.caseloadId,
       transactionTimestamp = result.transactionTimestamp,
       createdAt = result.createdAt,

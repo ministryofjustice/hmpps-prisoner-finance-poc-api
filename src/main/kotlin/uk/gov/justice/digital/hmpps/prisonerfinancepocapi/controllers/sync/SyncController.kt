@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionResponse
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionListResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
@@ -157,7 +158,7 @@ class SyncController(
   }
 
   @Operation(
-    summary = "Retrieve General Ledger transactions by date range",
+    summary = "Retrieve general ledger transactions by date range",
     description = "Fetches a list of general ledger transactions within a specified start and end date.",
   )
   @GetMapping(path = ["/sync/general-ledger-transactions"])
@@ -197,13 +198,57 @@ class SyncController(
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
   ): ResponseEntity<SyncGeneralLedgerTransactionListResponse> {
     val transactions = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate)
-
     val response = SyncGeneralLedgerTransactionListResponse(transactions)
     return ResponseEntity.ok(response)
   }
 
   @Operation(
-    summary = "Retrieve a single General Ledger transaction",
+    summary = "Retrieve offender transactions by date range",
+    description = "Fetches a list of offender transactions within a specified start and end date.",
+  )
+  @GetMapping(path = ["/sync/offender-transactions"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Offender transactions successfully retrieved.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = SyncOffenderTransactionListResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Bad request - invalid date format or range.",
+        content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized - requires a valid OAuth2 token",
+        content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden - requires an appropriate role",
+        content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "500",
+        description = "Internal Server Error - An unexpected error occurred.",
+        content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
+  fun getOffenderTransactionsByDate(
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
+  ): ResponseEntity<SyncOffenderTransactionListResponse> {
+    val transactions = syncQueryService.getOffenderTransactionsByDate(startDate, endDate)
+    val response = SyncOffenderTransactionListResponse(transactions)
+    return ResponseEntity.ok(response)
+  }
+
+  @Operation(
+    summary = "Retrieve a single general ledger transaction",
     description = "Fetches a single general ledger transaction by its ID.",
   )
   @GetMapping(path = ["/sync/general-ledger-transactions/{id}"])

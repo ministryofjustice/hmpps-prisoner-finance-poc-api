@@ -112,7 +112,7 @@ class RequestCaptureServiceTest {
         NomisSyncPayload(
           id = 1L,
           timestamp = payloadToSave.timestamp,
-          transactionId = payloadToSave.transactionId,
+          legacyTransactionId = payloadToSave.legacyTransactionId,
           requestId = payloadToSave.requestId,
           synchronizedTransactionId = payloadToSave.synchronizedTransactionId,
           caseloadId = payloadToSave.caseloadId,
@@ -138,7 +138,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
-      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
@@ -159,7 +159,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isEqualTo(mockedSynchronizedTransactionId)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
-      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
@@ -181,7 +181,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
-      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
@@ -202,7 +202,7 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isEqualTo(mockedSynchronizedTransactionId)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
-      assertThat(capturedPayloadSentToRepo.transactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
+      assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
@@ -218,7 +218,7 @@ class RequestCaptureServiceTest {
       NomisSyncPayload(
         id = 1L,
         timestamp = LocalDateTime.now(ZoneOffset.UTC).minusDays(1),
-        transactionId = 101,
+        legacyTransactionId = 101,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = UUID.randomUUID(),
         caseloadId = "LEI",
@@ -228,7 +228,7 @@ class RequestCaptureServiceTest {
       NomisSyncPayload(
         id = 2L,
         timestamp = LocalDateTime.now(ZoneOffset.UTC).minusHours(1),
-        transactionId = 102,
+        legacyTransactionId = 102,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = UUID.randomUUID(),
         caseloadId = "BRI",
