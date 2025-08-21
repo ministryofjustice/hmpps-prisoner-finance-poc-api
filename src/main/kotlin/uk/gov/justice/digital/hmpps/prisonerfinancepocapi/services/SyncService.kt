@@ -31,7 +31,7 @@ class SyncService(
       )
     }
 
-    val existingPayloadByTransactionId = syncQueryService.findByTransactionId(request.transactionId)
+    val existingPayloadByTransactionId = syncQueryService.findByLegacyTransactionId(request.transactionId)
     if (existingPayloadByTransactionId != null) {
       val newBodyJson = try {
         objectMapper.writeValueAsString(request)
@@ -67,11 +67,9 @@ class SyncService(
     }
 
     val newPayload = requestCaptureService.captureAndStoreRequest(request)
-    val synchronizedTransactionId = newPayload.synchronizedTransactionId
-      ?: throw IllegalStateException("Synchronized TransactionId cannot be null.")
     return SyncTransactionReceipt(
       requestId = request.requestId,
-      synchronizedTransactionId = synchronizedTransactionId,
+      synchronizedTransactionId = newPayload.synchronizedTransactionId,
       action = SyncTransactionReceipt.Action.CREATED,
     )
   }

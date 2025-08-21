@@ -12,6 +12,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlin.reflect.KClass
 
 @Service
 class SyncQueryService(
@@ -19,30 +20,23 @@ class SyncQueryService(
   private val responseMapperService: ResponseMapperService,
 ) {
 
-  fun findByRequestId(requestId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findByRequestId(requestId).firstOrNull()
+  fun findByRequestId(requestId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findByRequestId(requestId)
 
-  fun findByTransactionId(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findByTransactionId(transactionId).firstOrNull()
+  fun findByLegacyTransactionId(transactionId: Long): NomisSyncPayload? = nomisSyncPayloadRepository.findFirstByLegacyTransactionIdOrderByTimestampDesc(transactionId)
 
   fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(synchronizedTransactionId)
 
-  fun findGeneralLedgerTransactionsByTimestampBetween(startDate: LocalDate, endDate: LocalDate): List<NomisSyncPayload> {
-    val userZone = ZoneId.of("Europe/London")
-
-    // Convert the start and end of the user's local day to UTC
-    val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
-    val endOfUserDayInUtc = ZonedDateTime.of(endDate.plusDays(1).atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
-
-    return nomisSyncPayloadRepository.findAllByTransactionTimestampBetweenAndRequestTypeIdentifier(
-      startOfUserDayInUtc.toLocalDateTime(),
-      endOfUserDayInUtc.toLocalDateTime(),
-      SyncGeneralLedgerTransactionRequest::class.simpleName!!,
-    )
-  }
-
   fun getGeneralLedgerTransactionsByDate(startDate: LocalDate, endDate: LocalDate): List<SyncGeneralLedgerTransactionResponse> {
-    val nomisPayloads = findGeneralLedgerTransactionsByTimestampBetween(startDate, endDate)
+    val nomisPayloads = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncGeneralLedgerTransactionRequest::class)
     return nomisPayloads.map { payload ->
       responseMapperService.mapToGeneralLedgerTransactionResponse(payload)
+    }
+  }
+
+  fun getOffenderTransactionsByDate(startDate: LocalDate, endDate: LocalDate): List<SyncOffenderTransactionResponse> {
+    val nomisPayloads = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncOffenderTransactionRequest::class)
+    return nomisPayloads.map { payload ->
+      responseMapperService.mapToOffenderTransactionResponse(payload)
     }
   }
 
@@ -62,5 +56,22 @@ class SyncQueryService(
     } else {
       null
     }
+  }
+
+  private fun findNomisSyncPayloadsByTimestampAndType(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    requestType: KClass<*>,
+  ): List<NomisSyncPayload> {
+    val userZone = ZoneId.of("Europe/London")
+
+    val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
+    val endOfUserDayInUtc = ZonedDateTime.of(endDate.plusDays(1).atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
+
+    return nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
+      startOfUserDayInUtc.toLocalDateTime(),
+      endOfUserDayInUtc.toLocalDateTime(),
+      requestType.simpleName!!,
+    )
   }
 }

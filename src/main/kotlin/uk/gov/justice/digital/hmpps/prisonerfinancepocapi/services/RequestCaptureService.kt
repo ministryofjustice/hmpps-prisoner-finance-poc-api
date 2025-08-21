@@ -66,7 +66,7 @@ class RequestCaptureService(
 
     val payload = NomisSyncPayload(
       timestamp = LocalDateTime.now(ZoneOffset.UTC),
-      transactionId = requestBodyObject.transactionId,
+      legacyTransactionId = requestBodyObject.transactionId,
       synchronizedTransactionId = synchronizedTransactionId ?: UUID.randomUUID(),
       requestId = requestBodyObject.requestId,
       caseloadId = caseloadId,

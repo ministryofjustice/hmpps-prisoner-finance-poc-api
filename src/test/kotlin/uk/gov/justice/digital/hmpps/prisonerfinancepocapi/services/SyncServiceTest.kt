@@ -69,7 +69,7 @@ class SyncServiceTest {
     dummyStoredPayload = NomisSyncPayload(
       id = 1L,
       timestamp = LocalDateTime.now(ZoneOffset.UTC),
-      transactionId = dummyGeneralLedgerTransactionRequest.transactionId,
+      legacyTransactionId = dummyGeneralLedgerTransactionRequest.transactionId,
       requestId = dummyGeneralLedgerTransactionRequest.requestId,
       caseloadId = dummyGeneralLedgerTransactionRequest.caseloadId,
       requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName,
@@ -95,7 +95,7 @@ class SyncServiceTest {
       assertThat(result.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
       verify(syncQueryService, times(1)).findByRequestId(any())
-      verify(syncQueryService, times(0)).findByTransactionId(any())
+      verify(syncQueryService, times(0)).findByLegacyTransactionId(any())
       verify(requestCaptureService, times(0)).captureAndStoreRequest(any(), anyOrNull())
     }
 
@@ -103,7 +103,7 @@ class SyncServiceTest {
     fun `should return CREATED if neither requestId nor transactionId exists`() {
       // Given
       `when`(syncQueryService.findByRequestId(any())).thenReturn(null)
-      `when`(syncQueryService.findByTransactionId(any())).thenReturn(null)
+      `when`(syncQueryService.findByLegacyTransactionId(any())).thenReturn(null)
       `when`(requestCaptureService.captureAndStoreRequest(any(), anyOrNull())).thenReturn(dummyStoredPayload)
 
       // When
@@ -114,7 +114,7 @@ class SyncServiceTest {
       assertThat(result.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(result.synchronizedTransactionId).isEqualTo(dummyStoredPayload.synchronizedTransactionId)
       verify(syncQueryService, times(1)).findByRequestId(any())
-      verify(syncQueryService, times(1)).findByTransactionId(any())
+      verify(syncQueryService, times(1)).findByLegacyTransactionId(any())
       verify(requestCaptureService, times(1)).captureAndStoreRequest(any(), anyOrNull())
     }
 
@@ -125,7 +125,7 @@ class SyncServiceTest {
       @BeforeEach
       fun setup() {
         `when`(syncQueryService.findByRequestId(any())).thenReturn(null)
-        `when`(syncQueryService.findByTransactionId(any())).thenReturn(dummyStoredPayload)
+        `when`(syncQueryService.findByLegacyTransactionId(any())).thenReturn(dummyStoredPayload)
       }
 
       @Test

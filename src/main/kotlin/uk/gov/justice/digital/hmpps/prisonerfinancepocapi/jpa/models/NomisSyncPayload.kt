@@ -20,14 +20,14 @@ data class NomisSyncPayload(
 
   val timestamp: LocalDateTime,
 
-  @Column(name = "transaction_id")
-  val transactionId: Long?,
+  @Column(name = "legacy_transaction_id")
+  val legacyTransactionId: Long?,
 
   @Column(name = "synchronized_transaction_id")
   val synchronizedTransactionId: UUID,
 
-  @Column(name = "request_id")
-  val requestId: UUID?,
+  @Column(name = "request_id", unique = true)
+  val requestId: UUID,
 
   @Column(name = "caseload_id")
   val caseloadId: String?,
