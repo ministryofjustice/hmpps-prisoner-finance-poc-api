@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.util.RepositoryTest
@@ -26,6 +28,9 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
   private lateinit var payload2: NomisSyncPayload
   private lateinit var payload3: NomisSyncPayload
   private lateinit var payload4: NomisSyncPayload
+
+  private val initialPayloadCount = 4
+  private val uniqueInitialPayloadsForRequestType = 2
 
   @BeforeEach
   fun setup() {
@@ -124,7 +129,7 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
   inner class FindByRequestId {
     @Test
     fun `should find payload by request ID`() {
-      val found = nomisSyncPayloadRepository.findByRequestId(payload2.requestId!!)
+      val found = nomisSyncPayloadRepository.findByRequestId(payload2.requestId)
       assertThat(found).isEqualTo(payload2)
     }
 
@@ -156,7 +161,7 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
   inner class FindFirstBySynchronizedTransactionIdOrderByTimestampDesc {
     @Test
     fun `should find the latest payload by synchronized transaction ID`() {
-      val found = nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(payload1.synchronizedTransactionId!!)
+      val found = nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(payload1.synchronizedTransactionId)
       assertThat(found).isEqualTo(payload1)
     }
 
@@ -172,33 +177,42 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
   inner class FindLatestByTransactionTimestampBetweenAndRequestTypeIdentifier {
     @Test
     fun `should find the latest payloads within the date range and by request type`() {
+      val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
         LocalDateTime.now().minusDays(10),
         LocalDateTime.now(),
         requestType1,
+        pageable,
       )
-      assertThat(found).hasSize(2)
-      assertThat(found).containsExactlyInAnyOrder(payload1, payload2)
+      assertThat(found.content).hasSize(2)
+      assertThat(found.content).containsExactlyInAnyOrder(payload1, payload2)
+      assertThat(found.totalElements).isEqualTo(2)
     }
 
     @Test
     fun `should return empty list if no payloads within the date range`() {
+      val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
         LocalDateTime.now().minusDays(20),
         LocalDateTime.now().minusDays(15),
         requestType1,
+        pageable,
       )
-      assertThat(found).isEmpty()
+      assertThat(found.content).isEmpty()
+      assertThat(found.totalElements).isEqualTo(0)
     }
 
     @Test
     fun `should return empty list if no payloads with the request type`() {
+      val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
         LocalDateTime.now().minusDays(10),
         LocalDateTime.now(),
         "NonExistentType",
+        pageable,
       )
-      assertThat(found).isEmpty()
+      assertThat(found.content).isEmpty()
+      assertThat(found.totalElements).isEqualTo(0)
     }
 
     @Test
@@ -228,13 +242,84 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       )
       entityManager.persistAndFlush(newerPayload)
 
+      val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
         LocalDateTime.now().minusDays(10),
         LocalDateTime.now(),
         requestType1,
+        pageable,
       )
-      assertThat(found).hasSize(3)
-      assertThat(found).containsExactlyInAnyOrder(payload1, payload2, newerPayload)
+      assertThat(found.content).hasSize(3)
+      assertThat(found.content).containsExactlyInAnyOrder(payload1, payload2, newerPayload)
+      assertThat(found.totalElements).isEqualTo(3)
+    }
+
+    @Test
+    fun `should paginate results correctly`() {
+      val newPayloadCount = 25
+      val totalUniquePayloads = uniqueInitialPayloadsForRequestType + newPayloadCount
+
+      val pageSize = 10
+      val firstPageNumber = 0
+      val secondPageNumber = 1
+      val lastPageNumber = 2
+
+      val expectedFirstPageSize = 10
+      val expectedSecondPageSize = 10
+      val expectedLastPageSize = totalUniquePayloads - (expectedFirstPageSize + expectedSecondPageSize)
+
+      val payloads = (1..newPayloadCount).map {
+        NomisSyncPayload(
+          timestamp = LocalDateTime.now().minusMinutes(it.toLong()),
+          legacyTransactionId = 1000L + it,
+          requestId = UUID.randomUUID(),
+          caseloadId = "MDI",
+          requestTypeIdentifier = requestType1,
+          synchronizedTransactionId = UUID.randomUUID(),
+          body = """{"transactionId":100$it,"caseloadId":"MDI","offenderId":123,"eventType":"SyncOffenderTransaction"}""",
+          transactionTimestamp = LocalDateTime.now().minusDays(it.toLong()),
+        )
+      }
+      payloads.forEach { entityManager.persistAndFlush(it) }
+
+      // Get first page of 10
+      val pageable1: Pageable = PageRequest.of(firstPageNumber, pageSize)
+      val foundPage1 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
+        LocalDateTime.now().minusDays(30),
+        LocalDateTime.now(),
+        requestType1,
+        pageable1,
+      )
+      assertThat(foundPage1.content).hasSize(expectedFirstPageSize)
+      assertThat(foundPage1.totalElements).isEqualTo(totalUniquePayloads.toLong())
+      assertThat(foundPage1.totalPages).isEqualTo(3)
+      assertThat(foundPage1.number).isEqualTo(firstPageNumber)
+
+      // Get second page of 10
+      val pageable2: Pageable = PageRequest.of(secondPageNumber, pageSize)
+      val foundPage2 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
+        LocalDateTime.now().minusDays(30),
+        LocalDateTime.now(),
+        requestType1,
+        pageable2,
+      )
+      assertThat(foundPage2.content).hasSize(expectedSecondPageSize)
+      assertThat(foundPage2.totalElements).isEqualTo(totalUniquePayloads.toLong())
+      assertThat(foundPage2.totalPages).isEqualTo(3)
+      assertThat(foundPage2.number).isEqualTo(secondPageNumber)
+
+      // Get last page
+      val pageable3: Pageable = PageRequest.of(lastPageNumber, pageSize)
+      val foundPage3 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
+        LocalDateTime.now().minusDays(30),
+        LocalDateTime.now(),
+        requestType1,
+        pageable3,
+      )
+      assertThat(foundPage3.content).hasSize(expectedLastPageSize)
+      assertThat(foundPage3.totalElements).isEqualTo(totalUniquePayloads.toLong())
+      assertThat(foundPage3.totalPages).isEqualTo(3)
+      assertThat(foundPage3.number).isEqualTo(lastPageNumber)
     }
   }
 
@@ -244,7 +329,7 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     @Test
     fun `should retrieve all payloads`() {
       val found = nomisSyncPayloadRepository.findAll()
-      assertThat(found).hasSize(4)
+      assertThat(found).hasSize(initialPayloadCount)
       assertThat(found).containsExactlyInAnyOrder(payload1, payload2, payload3, payload4)
     }
   }

@@ -196,9 +196,19 @@ class SyncController(
   fun getGeneralLedgerTransactionsByDate(
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
+    @RequestParam(defaultValue = "0") page: Int,
+    @RequestParam(defaultValue = "20") size: Int,
   ): ResponseEntity<SyncGeneralLedgerTransactionListResponse> {
-    val transactions = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate)
-    val response = SyncGeneralLedgerTransactionListResponse(transactions)
+    val transactionsPage = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate, page, size)
+
+    val response = SyncGeneralLedgerTransactionListResponse(
+      transactions = transactionsPage.content,
+      page = transactionsPage.number,
+      totalElements = transactionsPage.totalElements,
+      totalPages = transactionsPage.totalPages,
+      last = transactionsPage.isLast,
+    )
+
     return ResponseEntity.ok(response)
   }
 
@@ -241,9 +251,18 @@ class SyncController(
   fun getOffenderTransactionsByDate(
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
+    @RequestParam(defaultValue = "0") page: Int,
+    @RequestParam(defaultValue = "20") size: Int,
   ): ResponseEntity<SyncOffenderTransactionListResponse> {
-    val transactions = syncQueryService.getOffenderTransactionsByDate(startDate, endDate)
-    val response = SyncOffenderTransactionListResponse(transactions)
+    val transactionsPage = syncQueryService.getOffenderTransactionsByDate(startDate, endDate, page, size)
+
+    val response = SyncOffenderTransactionListResponse(
+      offenderTransactions = transactionsPage.content,
+      page = transactionsPage.number,
+      totalElements = transactionsPage.totalElements,
+      totalPages = transactionsPage.totalPages,
+      last = transactionsPage.isLast,
+    )
     return ResponseEntity.ok(response)
   }
 
