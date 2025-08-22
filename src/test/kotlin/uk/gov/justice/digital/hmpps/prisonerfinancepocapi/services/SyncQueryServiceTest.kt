@@ -11,6 +11,9 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
@@ -142,11 +145,13 @@ class SyncQueryServiceTest {
   @DisplayName("getGeneralLedgerTransactionsByDate")
   inner class GeneralLedgerTransactionsTests {
     @Test
-    fun `should return mapped general ledger transactions`() {
+    fun `should return mapped general ledger transactions with pagination data`() {
       // Given
       val requestType = SyncGeneralLedgerTransactionRequest::class.simpleName!!
       val startDate = LocalDate.of(2023, 1, 1)
       val endDate = LocalDate.of(2023, 1, 31)
+      val page = 0
+      val size = 20
 
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = requestType)
       val mockResponse = SyncGeneralLedgerTransactionResponse(
@@ -166,30 +171,43 @@ class SyncQueryServiceTest {
         generalLedgerEntries = emptyList(),
       )
 
-      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any()))
-        .thenReturn(listOf(mockPayload))
+      val mockPayloadPage: Page<NomisSyncPayload> = PageImpl(
+        listOf(mockPayload),
+        PageRequest.of(page, size),
+        1,
+      )
+
+      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
+        .thenReturn(mockPayloadPage)
       `when`(responseMapperService.mapToGeneralLedgerTransactionResponse(any()))
         .thenReturn(mockResponse)
 
       // When
-      val result = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate)
+      val result = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate, page, size)
 
       // Then
-      assertThat(result).hasSize(1)
-      assertThat(result[0]).isEqualTo(mockResponse)
+      assertThat(result.content).hasSize(1)
+      assertThat(result.content[0]).isEqualTo(mockResponse)
+      assertThat(result.totalElements).isEqualTo(1)
+      assertThat(result.number).isEqualTo(page)
+      assertThat(result.size).isEqualTo(size)
     }
 
     @Test
-    fun `should return empty list if no general ledger transactions found`() {
+    fun `should return empty page if no general ledger transactions found`() {
       // Given
-      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any()))
-        .thenReturn(emptyList())
+      val page = 0
+      val size = 20
+      val emptyPage: Page<NomisSyncPayload> = Page.empty()
+      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
+        .thenReturn(emptyPage)
 
       // When
-      val result = syncQueryService.getGeneralLedgerTransactionsByDate(LocalDate.now(), LocalDate.now())
+      val result = syncQueryService.getGeneralLedgerTransactionsByDate(LocalDate.now(), LocalDate.now(), page, size)
 
       // Then
       assertThat(result).isEmpty()
+      assertThat(result.totalElements).isEqualTo(0)
     }
   }
 
@@ -197,11 +215,13 @@ class SyncQueryServiceTest {
   @DisplayName("getOffenderTransactionsByDate")
   inner class OffenderTransactionsTests {
     @Test
-    fun `should return mapped offender transactions`() {
+    fun `should return mapped offender transactions with pagination data`() {
       // Given
       val requestType = SyncOffenderTransactionRequest::class.simpleName!!
       val startDate = LocalDate.of(2023, 1, 1)
       val endDate = LocalDate.of(2023, 1, 31)
+      val page = 0
+      val size = 20
 
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = requestType)
       val mockResponse = SyncOffenderTransactionResponse(
@@ -218,30 +238,42 @@ class SyncQueryServiceTest {
         transactions = emptyList(),
       )
 
-      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any()))
-        .thenReturn(listOf(mockPayload))
+      val mockPayloadPage: Page<NomisSyncPayload> = PageImpl(
+        listOf(mockPayload),
+        PageRequest.of(page, size),
+        1,
+      )
+      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
+        .thenReturn(mockPayloadPage)
       `when`(responseMapperService.mapToOffenderTransactionResponse(any()))
         .thenReturn(mockResponse)
 
       // When
-      val result = syncQueryService.getOffenderTransactionsByDate(startDate, endDate)
+      val result = syncQueryService.getOffenderTransactionsByDate(startDate, endDate, page, size)
 
       // Then
-      assertThat(result).hasSize(1)
-      assertThat(result[0]).isEqualTo(mockResponse)
+      assertThat(result.content).hasSize(1)
+      assertThat(result.content[0]).isEqualTo(mockResponse)
+      assertThat(result.totalElements).isEqualTo(1)
+      assertThat(result.number).isEqualTo(page)
+      assertThat(result.size).isEqualTo(size)
     }
 
     @Test
-    fun `should return empty list if no offender transactions found`() {
+    fun `should return empty page if no offender transactions found`() {
       // Given
-      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any()))
-        .thenReturn(emptyList())
+      val page = 0
+      val size = 20
+      val emptyPage: Page<NomisSyncPayload> = Page.empty()
+      `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
+        .thenReturn(emptyPage)
 
       // When
-      val result = syncQueryService.getOffenderTransactionsByDate(LocalDate.now(), LocalDate.now())
+      val result = syncQueryService.getOffenderTransactionsByDate(LocalDate.now(), LocalDate.now(), page, size)
 
       // Then
       assertThat(result).isEmpty()
+      assertThat(result.totalElements).isEqualTo(0)
     }
   }
 

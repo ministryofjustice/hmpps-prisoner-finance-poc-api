@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -31,7 +33,8 @@ interface NomisSyncPayloadRepository : JpaRepository<NomisSyncPayload, Long> {
     @Param("startDate") startDate: LocalDateTime,
     @Param("endDate") endDate: LocalDateTime,
     @Param("requestTypeIdentifier") requestTypeIdentifier: String,
-  ): List<NomisSyncPayload>
+    pageable: Pageable,
+  ): Page<NomisSyncPayload>
 
   fun findFirstBySynchronizedTransactionIdOrderByTimestampDesc(synchronizedTransactionId: UUID): NomisSyncPayload?
 }

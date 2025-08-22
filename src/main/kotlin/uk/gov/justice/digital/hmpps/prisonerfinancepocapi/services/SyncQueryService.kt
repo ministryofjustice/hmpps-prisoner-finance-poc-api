@@ -1,5 +1,8 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
@@ -26,16 +29,28 @@ class SyncQueryService(
 
   fun findNomisSyncPayloadBySynchronizedTransactionId(synchronizedTransactionId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(synchronizedTransactionId)
 
-  fun getGeneralLedgerTransactionsByDate(startDate: LocalDate, endDate: LocalDate): List<SyncGeneralLedgerTransactionResponse> {
-    val nomisPayloads = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncGeneralLedgerTransactionRequest::class)
-    return nomisPayloads.map { payload ->
+  fun getGeneralLedgerTransactionsByDate(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    page: Int,
+    size: Int,
+  ): Page<SyncGeneralLedgerTransactionResponse> {
+    val pageable = PageRequest.of(page, size)
+    val nomisPayloadsPage = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncGeneralLedgerTransactionRequest::class, pageable)
+    return nomisPayloadsPage.map { payload ->
       responseMapperService.mapToGeneralLedgerTransactionResponse(payload)
     }
   }
 
-  fun getOffenderTransactionsByDate(startDate: LocalDate, endDate: LocalDate): List<SyncOffenderTransactionResponse> {
-    val nomisPayloads = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncOffenderTransactionRequest::class)
-    return nomisPayloads.map { payload ->
+  fun getOffenderTransactionsByDate(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    page: Int,
+    size: Int,
+  ): Page<SyncOffenderTransactionResponse> {
+    val pageable = PageRequest.of(page, size)
+    val nomisPayloadsPage = findNomisSyncPayloadsByTimestampAndType(startDate, endDate, SyncOffenderTransactionRequest::class, pageable)
+    return nomisPayloadsPage.map { payload ->
       responseMapperService.mapToOffenderTransactionResponse(payload)
     }
   }
@@ -62,7 +77,8 @@ class SyncQueryService(
     startDate: LocalDate,
     endDate: LocalDate,
     requestType: KClass<*>,
-  ): List<NomisSyncPayload> {
+    pageable: Pageable,
+  ): Page<NomisSyncPayload> {
     val userZone = ZoneId.of("Europe/London")
 
     val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
@@ -72,6 +88,7 @@ class SyncQueryService(
       startOfUserDayInUtc.toLocalDateTime(),
       endOfUserDayInUtc.toLocalDateTime(),
       requestType.simpleName!!,
+      pageable,
     )
   }
 }

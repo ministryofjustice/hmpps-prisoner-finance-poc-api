@@ -11,6 +11,8 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
 import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.controllers.sync.SyncController
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
@@ -207,16 +209,38 @@ class SyncControllerTest {
   @DisplayName("getGeneralLedgerTransactionsByDate")
   inner class GetGeneralLedgerTransactionsByDate {
     @Test
-    fun `should return a list of transactions and OK status`() {
+    fun `should return a list of transactions and OK status with pagination data`() {
       val startDate = LocalDate.of(2025, 1, 1)
       val endDate = LocalDate.of(2025, 1, 31)
       val transactions = listOf(generalLedgerTransactionResponse)
-      `when`(syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate)).thenReturn(transactions)
-      val response = syncController.getGeneralLedgerTransactionsByDate(startDate, endDate)
+      val page = PageImpl(transactions, org.springframework.data.domain.PageRequest.of(0, 20), 1)
+
+      `when`(syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate, 0, 20)).thenReturn(page)
+      val response = syncController.getGeneralLedgerTransactionsByDate(startDate, endDate, 0, 20)
+
       assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
       assertThat(response.body).isInstanceOf(SyncGeneralLedgerTransactionListResponse::class.java)
       assertThat(response.body?.transactions).hasSize(1)
       assertThat(response.body?.transactions).isEqualTo(transactions)
+      assertThat(response.body?.page).isEqualTo(0)
+      assertThat(response.body?.totalElements).isEqualTo(1)
+      assertThat(response.body?.totalPages).isEqualTo(1)
+      assertThat(response.body?.last).isTrue()
+    }
+
+    @Test
+    fun `should return an empty list and OK status when no transactions are found`() {
+      val startDate = LocalDate.of(2025, 1, 1)
+      val endDate = LocalDate.of(2025, 1, 31)
+      val emptyPage = Page.empty<SyncGeneralLedgerTransactionResponse>()
+
+      `when`(syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate, 0, 20)).thenReturn(emptyPage)
+      val response = syncController.getGeneralLedgerTransactionsByDate(startDate, endDate, 0, 20)
+
+      assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+      assertThat(response.body).isInstanceOf(SyncGeneralLedgerTransactionListResponse::class.java)
+      assertThat(response.body?.transactions).isEmpty()
+      assertThat(response.body?.totalElements).isEqualTo(0)
     }
   }
 
@@ -224,27 +248,38 @@ class SyncControllerTest {
   @DisplayName("getOffenderTransactionsByDate")
   inner class GetOffenderTransactionsByDate {
     @Test
-    fun `should return a list of offender transactions and OK status`() {
+    fun `should return a list of offender transactions and OK status with pagination data`() {
       val startDate = LocalDate.of(2025, 1, 1)
       val endDate = LocalDate.of(2025, 1, 31)
       val transactions = listOf(offenderTransactionResponse)
-      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate)).thenReturn(transactions)
-      val response = syncController.getOffenderTransactionsByDate(startDate, endDate)
+      val page = PageImpl(transactions, org.springframework.data.domain.PageRequest.of(0, 20), 1)
+
+      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate, 0, 20)).thenReturn(page)
+      val response = syncController.getOffenderTransactionsByDate(startDate, endDate, 0, 20)
+
       assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
       assertThat(response.body).isInstanceOf(SyncOffenderTransactionListResponse::class.java)
       assertThat(response.body?.offenderTransactions).hasSize(1)
       assertThat(response.body?.offenderTransactions).isEqualTo(transactions)
+      assertThat(response.body?.page).isEqualTo(0)
+      assertThat(response.body?.totalElements).isEqualTo(1)
+      assertThat(response.body?.totalPages).isEqualTo(1)
+      assertThat(response.body?.last).isTrue()
     }
 
     @Test
     fun `should return an empty list and OK status when no offender transactions are found`() {
       val startDate = LocalDate.of(2025, 1, 1)
       val endDate = LocalDate.of(2025, 1, 31)
-      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate)).thenReturn(emptyList())
-      val response = syncController.getOffenderTransactionsByDate(startDate, endDate)
+      val emptyPage = Page.empty<SyncOffenderTransactionResponse>()
+
+      `when`(syncQueryService.getOffenderTransactionsByDate(startDate, endDate, 0, 20)).thenReturn(emptyPage)
+      val response = syncController.getOffenderTransactionsByDate(startDate, endDate, 0, 20)
+
       assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
       assertThat(response.body).isInstanceOf(SyncOffenderTransactionListResponse::class.java)
       assertThat(response.body?.offenderTransactions).isEmpty()
+      assertThat(response.body?.totalElements).isEqualTo(0)
     }
   }
 
