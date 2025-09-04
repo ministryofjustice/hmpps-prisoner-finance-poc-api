@@ -23,30 +23,30 @@ sequenceDiagram
 
   USER ->> SHOP: Enter order details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit PaymentIntent
+  SHOP ->> API: Submit <PaymentRequest>
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
   LEDGER -->> API: Available spends
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create pending payment
+  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest>
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
 
@@ -71,36 +71,36 @@ sequenceDiagram
 
   USER ->> SHOP: Enter purchase details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit PaymentIntent
+  SHOP ->> API: Submit <PaymentRequest>
   deactivate SHOP
   activate API
   API ->> LEDGER: Check private cash
   LEDGER -->> API: Private cash balance
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create pending payment
+  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest>
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
 
 ### 3. Ordering using available spends and additional private cash
 
-This process would take place in circumstances where the governor has given permission for the prisoner to spend more than their available spends. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the prisoner has more funds in their savings sub-accounts.
+This process would take place in circumstances such as dental treatment or where the governor has given permission for the prisoner to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the prisoner has more funds in their savings sub-accounts.
 
 ```mermaid
 sequenceDiagram
@@ -119,9 +119,9 @@ sequenceDiagram
 
   USER ->> SHOP: Enter purchase amount
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit PaymentIntent
+  SHOP ->> API: Submit <PaymentRequest>
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
@@ -130,23 +130,23 @@ sequenceDiagram
   API ->> LEDGER: Check private cash
   LEDGER -->> API: Private cash balance
   API -->> API: Confirm additional funds available
-  API ->> LEDGER: Create pending payment
+  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
   activate LEDGER
-  note right of LEDGER: Seperate transactions<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
+  note right of LEDGER: Seperate ledger entries<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest>
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
 
@@ -174,9 +174,9 @@ sequenceDiagram
 
   USER ->> SHOP: Enter order details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit PaymentIntent
+  SHOP ->> API: Submit <PaymentRequest>
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
@@ -191,36 +191,36 @@ sequenceDiagram
   USER ->> SHOP: Request advance
   SHOP ->> API: Approve advance
   activate API
-  API ->> API: Create AdvanceIntent
-  API ->> API: Add prisoner payment
-  API ->> REPAY: Submit AdvanceIntent
+  API ->> API: Create <AdvanceRequest>
+  API ->> API: Add prisoner advance
+  API ->> REPAY: Submit <AdvanceRequest>
   activate REPAY
   deactivate API
-  REPAY ->> LEDGER: Create pending transfers
+  REPAY ->> LEDGER: Create <pending><br/>advance setup transaction
+  REPAY ->> LEDGER: Create <pending><br/>prisoner credit transaction
   activate LEDGER
   REPAY -->> API: Success response
   deactivate REPAY
-  note right of LEDGER: Seperate transactions for:<br/>1. prison to advance account<br/>2. advance account to prisoner
-  API ->> LEDGER: Create pending payment
+  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent
-  API ->> REPAY: Authorise AdvanceIntent
+  SHOP ->> API: Authorise <PaymentRequest>
+  API ->> REPAY: Authorise <AdvanceRequest>
   activate REPAY
-  REPAY -) ADI: Append GL transactions
+  REPAY -) ADI: Append ADI instructions
   REPAY -> REPAY: Setup payment schedule
   REPAY -->> API: Success response
   deactivate REPAY
-  API -) ADI: Append GL transactions
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 
 ```
@@ -236,7 +236,7 @@ sequenceDiagram
 
 This process is often employed as part of the canteen or tuck shop processes where several different items can be purchased from several different suppliers such as BT and DHL.
 
-The process will consider the complete payment total when determining whether there are enough available funds, but will record individual transactions for each supplier with the amount spent with each.
+The process will consider the complete payment total when determining whether there are enough available funds, but will record individual ledger entries for each supplier with the amount spent with each.
 
 ```mermaid
 sequenceDiagram
@@ -255,31 +255,31 @@ sequenceDiagram
 
   USER ->> SHOP: Enter order details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
   SHOP ->> SHOP: Add second supplier payment
-  SHOP ->> API: Submit PaymentIntent
+  SHOP ->> API: Submit <PaymentRequest>
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
   LEDGER -->> API: Available spends
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create batch of pending payments
+  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest>
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
 
@@ -287,7 +287,7 @@ sequenceDiagram
 
 This process is often employed for batch processing where several items have been ordered by several different people.
 
-The process will consider the payment total for each person when determining whether there are enough available funds, and will record individual transactions for each person with the amount spent by each.
+The process will consider the payment total for each person when determining whether there are enough available funds, and will record individual ledger entries for each person with the amount spent by each.
 
 ```mermaid
 sequenceDiagram
@@ -306,11 +306,11 @@ sequenceDiagram
 
   USER ->> SHOP: Enter order details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> SHOP: Create second PaymentIntent
+  SHOP ->> SHOP: Create second <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit PaymentIntent Batch
+  SHOP ->> API: Submit <PaymentRequest> batch
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
@@ -319,22 +319,22 @@ sequenceDiagram
   API ->> LEDGER: Check second available spends
   LEDGER -->> API: Available spends
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create batch of pending payments
+  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent Batch
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest> batch
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
 
@@ -342,7 +342,7 @@ sequenceDiagram
 
 This process is employed when batch processing multiple order as part of the canteen process or similar where several different items can be purchased from several different suppliers such as BT and DHL for several different people.
 
-The process will consider the complete payment total per person when determining whether there are enough available funds, and will record individual transactions for each supplier for each person with the amount spent with each.
+The process will consider the complete payment total per person when determining whether there are enough available funds, and will record individual ledger entries for each supplier for each person with the amount spent with each.
 
 ```mermaid
 sequenceDiagram
@@ -361,13 +361,13 @@ sequenceDiagram
 
   USER ->> SHOP: Enter order details
   activate SHOP
-  SHOP ->> SHOP: Create PaymentIntent
+  SHOP ->> SHOP: Create <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
   SHOP ->> SHOP: Add second supplier payment
-  SHOP ->> SHOP: Create second PaymentIntent
+  SHOP ->> SHOP: Create second <PaymentRequest>
   SHOP ->> SHOP: Add supplier payment
   SHOP ->> SHOP: Add third supplier payment
-  SHOP ->> API: Submit PaymentIntent Batch
+  SHOP ->> API: Submit <PaymentRequest> batch
   deactivate SHOP
   activate API
   API ->> LEDGER: Check available spends
@@ -376,21 +376,21 @@ sequenceDiagram
   API ->> LEDGER: Check second available spends
   LEDGER -->> API: Available spends
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create batch of pending payments
+  API ->> LEDGER: Create four <pending><br/>prisoner debit ledger entries
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise PaymentIntent Batch
-  API -) ADI: Append GL transactions
+  SHOP ->> API: Authorise <PaymentRequest> batch
+  API -) ADI: Append ADI instructions
   API -->> SHOP: Authorization result
   deactivate API
   SHOP -->> USER: Checkout complete
   SHOP -->> USER: Email receipt
   ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write GL transactions
+  SOP ->> SOP: Write general ledger entries
   SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status to processed
+  ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 ```
