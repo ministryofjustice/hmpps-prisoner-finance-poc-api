@@ -4,7 +4,7 @@
 
 ### 1. Ordering within available spends limit
 
-This would be the most common payment process, it is only effective for a pre-delivery process where the payment is taken before the purchase is fulfilled (such as with Amazon or other ecommerce services). Failure will occur if there is not enough available spends to complete the purchase, even if the prisoner has more funds in their private cash or savings sub-accounts.
+This would be the most common payment process, it is only effective for a pre-delivery process where the payment is taken before the purchase is fulfilled (such as with Amazon or other ecommerce services). Failure will occur if there is not enough available spends to complete the purchase, even if the person has more funds in their private cash or savings sub-accounts.
 
 ```mermaid
 sequenceDiagram
@@ -31,7 +31,7 @@ sequenceDiagram
   API ->> LEDGER: Check available spends
   LEDGER -->> API: Available spends
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
+  API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
@@ -50,9 +50,31 @@ sequenceDiagram
   deactivate LEDGER
 ```
 
+Example `PaymentRequest` showing one supplier payment to be taken from available spends submitted at step 4:
+
+```json
+{
+  "orderId": "CANTEEN-0001",
+  "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+  "timestamp": "2024-06-18T14:30:00.123456",
+  "personIdentifier": "X9999XX",
+  "paymentMethods": ["SPNDS"],
+  "caseloadId": "FHI",
+  "total": 1.5,
+  "payments": [
+    {
+      "supplierName": "CANTEENS-R-US",
+      "supplierId": "5101",
+      "description": "Purchase of goods from canteen",
+      "amount": 1.5
+    }
+  ]
+}
+```
+
 ### 2. Recording a purchase from private cash
 
-This process would take place in circumstances where items are not limited to the available spends limit. It is primarily for emergency purchases or items that are not restricted to available spends such as money to friends and family members. Failure will occur if there is not enough private cash to complete the purchase, even if the prisoner has more funds in their available spends or savings sub-accounts.
+This process would take place in circumstances where items are not limited to the available spends limit. It is primarily for emergency purchases or items that are not restricted to available spends such as money to friends and family members. Failure will occur if there is not enough private cash to complete the purchase, even if the person has more funds in their available spends or savings sub-accounts.
 
 ```mermaid
 sequenceDiagram
@@ -79,7 +101,7 @@ sequenceDiagram
   API ->> LEDGER: Check private cash
   LEDGER -->> API: Private cash balance
   API -->> API: Confirm funds available
-  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
+  API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
   activate LEDGER
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
@@ -98,9 +120,31 @@ sequenceDiagram
   deactivate LEDGER
 ```
 
+Example `PaymentRequest` showing one supplier payment to be taken from private cash submitted at step 4:
+
+```json
+{
+  "orderId": "PHARMA-6098-GMI",
+  "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+  "timestamp": "2024-06-18T14:30:00.123456",
+  "personIdentifier": "X9999XX",
+  "paymentMethods": ["CASH"],
+  "caseloadId": "GMI",
+  "total": 0.25,
+  "payments": [
+    {
+      "supplierName": "PHARMACIES-R-US",
+      "supplierId": "3409",
+      "description": "Purchase of medication from pharmacy",
+      "amount": 0.25
+    }
+  ]
+}
+```
+
 ### 3. Ordering using available spends and additional private cash
 
-This process would take place in circumstances such as dental treatment or where the governor has given permission for the prisoner to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the prisoner has more funds in their savings sub-accounts.
+This process would take place in circumstances such as dental treatment or where the governor has given permission for the person to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the person has more funds in their savings sub-accounts.
 
 ```mermaid
 sequenceDiagram
@@ -150,11 +194,33 @@ sequenceDiagram
   deactivate LEDGER
 ```
 
+Example `PaymentRequest` showing one supplier payment to be taken from available spends and private cash submitted at step 4:
+
+```json
+{
+  "orderId": "CATALOGUE-6098-LVI",
+  "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+  "timestamp": "2024-06-18T14:30:00.123456",
+  "personIdentifier": "X9999XX",
+  "paymentMethods": ["SPNDS", "CASH"],
+  "caseloadId": "GMI",
+  "total": 35,
+  "payments": [
+    {
+      "supplierName": "CATALOGUES-R-US",
+      "supplierId": "3608",
+      "description": "Purchase of items from Catalogue",
+      "amount": 35
+    }
+  ]
+}
+```
+
 ### 4. Purchasing with advance only
 
-This process would take place in circumstances where the prisoner does not have any money available to spend such as when they first arrive in prison.
+This process would take place in circumstances where the person does not have any money available to spend such as when they first arrive in prison.
 
-It is normal for governor approval to be sought but there can also be a prison wide policy around automatic supply of grants in specific circumstances such as transfers from a private prison or arrival without cash. Failure will occur if the total amount is more than allowed by an advance.
+It is normal for governor approval to be sought but there can also be a prison wide policy around automatic supply of advances in specific circumstances such as transfers from a private prison or arrival without cash. Failure will occur if the total amount is more than allowed by an advance.
 
 ```mermaid
 sequenceDiagram
@@ -196,12 +262,12 @@ sequenceDiagram
   API ->> REPAY: Submit <AdvanceRequest>
   activate REPAY
   deactivate API
-  REPAY ->> LEDGER: Create <pending><br/>advance setup transaction
-  REPAY ->> LEDGER: Create <pending><br/>prisoner credit transaction
+  REPAY ->> LEDGER: Create <pending><br/>advance setup ledger entry
+  REPAY ->> LEDGER: Create <pending><br/>prisoner credit ledger enty
   activate LEDGER
   REPAY -->> API: Success response
   deactivate REPAY
-  API ->> LEDGER: Create <pending><br/>prisoner debit transaction
+  API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
   LEDGER -->> API: Success response
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
@@ -223,6 +289,28 @@ sequenceDiagram
   ADI ->> LEDGER: Set status of ledger entries to processed
   deactivate LEDGER
 
+```
+
+Example `PaymentRequest` showing one supplier payment to be taken from from advance if the person has no other funds submitted at step 4:
+
+```json
+{
+  "orderId": "TUCKSHOP-6098-BMI",
+  "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+  "timestamp": "2024-06-18T14:30:00.123456",
+  "personIdentifier": "X9999XX",
+  "paymentMethods": ["SPNDS", "CASH", "ADV"],
+  "caseloadId": "BMI",
+  "total": 5,
+  "payments": [
+    {
+      "supplierName": "TUSKSHOPS-R-US",
+      "supplierId": "8004",
+      "description": "Purchase of first night canteen package",
+      "amount": 5
+    }
+  ]
+}
 ```
 
 ### 5. Ordering using available funds and advance
