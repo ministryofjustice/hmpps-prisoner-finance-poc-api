@@ -188,14 +188,24 @@ sequenceDiagram
   activate API
   API ->> LEDGER: Check available spends
   LEDGER -->> API: Available spends
-  API -->> API: Confirm funds not available
-  API ->> LEDGER: Check private cash
-  LEDGER -->> API: Private cash balance
-  API -->> API: Confirm additional funds available
-  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
+  alt When enough funds in first account
+    API -->> API: Confirm all funds available
+    activate LEDGER
+    API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
+    LEDGER -->> API: Success response
+    deactivate LEDGER
+  else When additional funds required from second account
+    API -->> API: Confirm not all funds available
+    API ->> LEDGER: Check private cash
+    LEDGER -->> API: Private cash balance
+    API -->> API: Confirm additional funds available
   activate LEDGER
-  note right of LEDGER: Seperate ledger entries<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
-  LEDGER -->> API: Success response
+    API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
+    note right of LEDGER: Seperate ledger entries<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
+    LEDGER -->> API: Success response
+    deactivate LEDGER
+  end
+  activate LEDGER
   API -->> SHOP: Success response
   SHOP -->> USER: Check details
   USER ->> SHOP: Confirm details
