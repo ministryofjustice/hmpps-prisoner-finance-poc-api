@@ -8,52 +8,56 @@ This would be the most common payment process, it is only effective for a pre-de
 
 ```mermaid
 sequenceDiagram
-  actor USER as User
-  participant SHOP as Shop
-  box Prisoner Finance
-  participant API as Payments Service
-  participant LEDGER as Ledger
-  participant ADI as Reconciliation Service
-  end
-  box Single Operating Platform
-  participant SOP as General ledger
-  end
+    actor USER as User
+    participant SHOP as Shop
+    box Prisoner Finance
+        participant API as Payments Service
+        participant LEDGER as Ledger
+        participant ADI as Reconciliation Service
+    end
+    box Single Operating Platform
+        participant SOP as General ledger
+    end
 
-  autonumber
+    autonumber
 
-  USER ->> SHOP: Enter order details
-  activate SHOP
-  SHOP ->> SHOP: Create <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit <PaymentRequest>
-  deactivate SHOP
-  activate API
-  API ->> LEDGER: Check available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
-  activate LEDGER
-  LEDGER -->> API: Success response
-  API -->> SHOP: Success response
-  SHOP -->> USER: Check details
-  USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise <PaymentRequest>
-  API -) ADI: Append ADI instructions
-  API -->> SHOP: Authorization result
-  deactivate API
-  SHOP -->> USER: Checkout complete
-  SHOP -->> USER: Email receipt
-  ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write general ledger entries
-  SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status of ledger entries to processed
-  deactivate LEDGER
+    USER ->> SHOP: Enter order details
+    activate SHOP
+    SHOP ->> SHOP: Create <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> API: Submit <PaymentRequest>
+    deactivate SHOP
+    activate API
+    API ->> LEDGER: Check available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Create <pending><br/>prisoner debit ledger entry
+    activate LEDGER
+    LEDGER -->> API: Success response
+    API -->> SHOP: Success response
+    SHOP -->> USER: Check details
+    USER ->> SHOP: Confirm details
+    SHOP ->> API: Authorise <PaymentRequest>
+    API -) ADI: Append ADI instructions
+    API -->> SHOP: Authorization result
+    deactivate API
+    SHOP -->> USER: Checkout complete
+    SHOP -->> USER: Email receipt
+    ADI ->> SOP: Upload ADI
+    SOP ->> SOP: Write general ledger entries
+    SOP -->> ADI: Success response
+    ADI ->> LEDGER: Set status of ledger entries to processed
+    deactivate LEDGER
 ```
 
 Example `PaymentRequest` showing one supplier payment to be taken from available spends submitted at step 4:
 
-```json
-{
+```shell
+curl -X 'POST' \
+  'https://dev-payments.prisoner-finance.service.justice.gov.uk/suppliers/CANTEENS-R-US/payment-requests' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
   "orderId": "CANTEEN-0001",
   "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
   "timestamp": "2024-06-18T14:30:00.123456",
@@ -63,14 +67,26 @@ Example `PaymentRequest` showing one supplier payment to be taken from available
   "total": 1.5,
   "payments": [
     {
-      "supplierName": "CANTEENS-R-US",
-      "supplierId": "5101",
       "description": "Purchase of goods from canteen",
       "amount": 1.5
     }
   ]
-}
+}'
 ```
+
+Example of ledger entry recorded at step 8:
+
+| entryId | transactionId | date       | source | destination | description                    | reference    | amount |
+|---------|---------------|------------|--------|-------------|--------------------------------|--------------|--------|
+| 123     | 987           | 2024-06-18 | AAA    | BBB         | Purchase of goods from canteen | CANTEEN-0001 |    1.5 |
+
+Example of ADI instruction recorded at step 14:
+
+| Upl     | Entity | Cost Centre | Account    | Objective | Analysis | Intercompany | Spare   | Debit | Credit | Line Description                           |      | Messages |
+|---------|--------|-------------|------------|-----------|----------|--------------|---------|-------|--------|--------------------------------------------|------|----------|
+| O       | 6666   | 99999999    | 8888888888 | 0000000   | 00000000 | 0000         | 0000000 | 1.5   |        | Canteen Spends - 09.01.2024 - CANTEEN-0001 |      |          |
+| O       | 4444   | 11111111    | 2222222222 | 0000000   | 00000000 | 0000         | 0000000 |       | 1.5    | Canteen Spends - 09.01.2024 - CANTEEN-0001 |      |          |
+| Totals: |        |             |            |           |          |              |         | £1.50 | £1.50  |                                            |      |          |
 
 ### 2. Recording a purchase from private cash
 
@@ -122,8 +138,12 @@ sequenceDiagram
 
 Example `PaymentRequest` showing one supplier payment to be taken from private cash submitted at step 4:
 
-```json
-{
+```shell
+curl -X 'POST' \
+  'https://dev-payments.prisoner-finance.service.justice.gov.uk/suppliers/PHARMAS-R-US/payment-requests' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
   "orderId": "PHARMA-6098-GMI",
   "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
   "timestamp": "2024-06-18T14:30:00.123456",
@@ -133,13 +153,11 @@ Example `PaymentRequest` showing one supplier payment to be taken from private c
   "total": 0.25,
   "payments": [
     {
-      "supplierName": "PHARMACIES-R-US",
-      "supplierId": "3409",
       "description": "Purchase of medication from pharmacy",
       "amount": 0.25
     }
   ]
-}
+}'
 ```
 
 ### 3. Ordering using available spends and additional private cash
@@ -196,8 +214,12 @@ sequenceDiagram
 
 Example `PaymentRequest` showing one supplier payment to be taken from available spends and private cash submitted at step 4:
 
-```json
-{
+```shell
+curl -X 'POST' \
+  'https://dev-payments.prisoner-finance.service.justice.gov.uk/suppliers/CATALOGUES-R-US/payment-requests' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
   "orderId": "CATALOGUE-6098-LVI",
   "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
   "timestamp": "2024-06-18T14:30:00.123456",
@@ -207,13 +229,11 @@ Example `PaymentRequest` showing one supplier payment to be taken from available
   "total": 35,
   "payments": [
     {
-      "supplierName": "CATALOGUES-R-US",
-      "supplierId": "3608",
       "description": "Purchase of items from Catalogue",
       "amount": 35
     }
   ]
-}
+}'
 ```
 
 ### 4. Purchasing with advance only
@@ -293,8 +313,12 @@ sequenceDiagram
 
 Example `PaymentRequest` showing one supplier payment to be taken from from advance if the person has no other funds submitted at step 4:
 
-```json
-{
+```shell
+curl -X 'POST' \
+  'https://dev-payments.prisoner-finance.service.justice.gov.uk/suppliers/TUCKSHOPS-R-US/payment-requests' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
   "orderId": "TUCKSHOP-6098-BMI",
   "requestId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
   "timestamp": "2024-06-18T14:30:00.123456",
@@ -304,20 +328,18 @@ Example `PaymentRequest` showing one supplier payment to be taken from from adva
   "total": 5,
   "payments": [
     {
-      "supplierName": "TUSKSHOPS-R-US",
-      "supplierId": "8004",
       "description": "Purchase of first night canteen package",
       "amount": 5
     }
   ]
-}
+}'
 ```
 
 ### 5. Ordering using available funds and advance
 
 ```mermaid
 sequenceDiagram
-  actor User as User
+    actor User as User
 ```
 
 ### 6. Purchasing from multiple suppliers
@@ -328,47 +350,47 @@ The process will consider the complete payment total when determining whether th
 
 ```mermaid
 sequenceDiagram
-  actor USER as User
-  participant SHOP as Shop
-  box Prisoner Finance
-  participant API as Payments Service
-  participant LEDGER as Ledger
-  participant ADI as Reconciliation Service
-  end
-  box Single Operating Platform
-  participant SOP as General ledger
-  end
+    actor USER as User
+    participant SHOP as Shop
+    box Prisoner Finance
+        participant API as Payments Service
+        participant LEDGER as Ledger
+        participant ADI as Reconciliation Service
+    end
+    box Single Operating Platform
+        participant SOP as General ledger
+    end
 
-  autonumber
+    autonumber
 
-  USER ->> SHOP: Enter order details
-  activate SHOP
-  SHOP ->> SHOP: Create <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> SHOP: Add second supplier payment
-  SHOP ->> API: Submit <PaymentRequest>
-  deactivate SHOP
-  activate API
-  API ->> LEDGER: Check available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
-  activate LEDGER
-  LEDGER -->> API: Success response
-  API -->> SHOP: Success response
-  SHOP -->> USER: Check details
-  USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise <PaymentRequest>
-  API -) ADI: Append ADI instructions
-  API -->> SHOP: Authorization result
-  deactivate API
-  SHOP -->> USER: Checkout complete
-  SHOP -->> USER: Email receipt
-  ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write general ledger entries
-  SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status of ledger entries to processed
-  deactivate LEDGER
+    USER ->> SHOP: Enter order details
+    activate SHOP
+    SHOP ->> SHOP: Create <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> SHOP: Add second supplier payment
+    SHOP ->> API: Submit <PaymentRequest>
+    deactivate SHOP
+    activate API
+    API ->> LEDGER: Check available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
+    activate LEDGER
+    LEDGER -->> API: Success response
+    API -->> SHOP: Success response
+    SHOP -->> USER: Check details
+    USER ->> SHOP: Confirm details
+    SHOP ->> API: Authorise <PaymentRequest>
+    API -) ADI: Append ADI instructions
+    API -->> SHOP: Authorization result
+    deactivate API
+    SHOP -->> USER: Checkout complete
+    SHOP -->> USER: Email receipt
+    ADI ->> SOP: Upload ADI
+    SOP ->> SOP: Write general ledger entries
+    SOP -->> ADI: Success response
+    ADI ->> LEDGER: Set status of ledger entries to processed
+    deactivate LEDGER
 ```
 
 ### 7. Purchasing for several people from same supplier
@@ -379,51 +401,51 @@ The process will consider the payment total for each person when determining whe
 
 ```mermaid
 sequenceDiagram
-  actor USER as User
-  participant SHOP as Shop
-  box Prisoner Finance
-  participant API as Payments Service
-  participant LEDGER as Ledger
-  participant ADI as Reconciliation Service
-  end
-  box Single Operating Platform
-  participant SOP as General ledger
-  end
+    actor USER as User
+    participant SHOP as Shop
+    box Prisoner Finance
+        participant API as Payments Service
+        participant LEDGER as Ledger
+        participant ADI as Reconciliation Service
+    end
+    box Single Operating Platform
+        participant SOP as General ledger
+    end
 
-  autonumber
+    autonumber
 
-  USER ->> SHOP: Enter order details
-  activate SHOP
-  SHOP ->> SHOP: Create <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> SHOP: Create second <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> API: Submit <PaymentRequest> batch
-  deactivate SHOP
-  activate API
-  API ->> LEDGER: Check available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Check second available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
-  activate LEDGER
-  LEDGER -->> API: Success response
-  API -->> SHOP: Success response
-  SHOP -->> USER: Check details
-  USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise <PaymentRequest> batch
-  API -) ADI: Append ADI instructions
-  API -->> SHOP: Authorization result
-  deactivate API
-  SHOP -->> USER: Checkout complete
-  SHOP -->> USER: Email receipt
-  ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write general ledger entries
-  SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status of ledger entries to processed
-  deactivate LEDGER
+    USER ->> SHOP: Enter order details
+    activate SHOP
+    SHOP ->> SHOP: Create <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> SHOP: Create second <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> API: Submit <PaymentRequest> batch
+    deactivate SHOP
+    activate API
+    API ->> LEDGER: Check available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Check second available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
+    activate LEDGER
+    LEDGER -->> API: Success response
+    API -->> SHOP: Success response
+    SHOP -->> USER: Check details
+    USER ->> SHOP: Confirm details
+    SHOP ->> API: Authorise <PaymentRequest> batch
+    API -) ADI: Append ADI instructions
+    API -->> SHOP: Authorization result
+    deactivate API
+    SHOP -->> USER: Checkout complete
+    SHOP -->> USER: Email receipt
+    ADI ->> SOP: Upload ADI
+    SOP ->> SOP: Write general ledger entries
+    SOP -->> ADI: Success response
+    ADI ->> LEDGER: Set status of ledger entries to processed
+    deactivate LEDGER
 ```
 
 ### 8. Purchasing for several people from multiple suppliers
@@ -434,51 +456,51 @@ The process will consider the complete payment total per person when determining
 
 ```mermaid
 sequenceDiagram
-  actor USER as User
-  participant SHOP as Shop
-  box Prisoner Finance
-  participant API as Payments Service
-  participant LEDGER as Ledger
-  participant ADI as Reconciliation Service
-  end
-  box Single Operating Platform
-  participant SOP as General ledger
-  end
+    actor USER as User
+    participant SHOP as Shop
+    box Prisoner Finance
+        participant API as Payments Service
+        participant LEDGER as Ledger
+        participant ADI as Reconciliation Service
+    end
+    box Single Operating Platform
+        participant SOP as General ledger
+    end
 
-  autonumber
+    autonumber
 
-  USER ->> SHOP: Enter order details
-  activate SHOP
-  SHOP ->> SHOP: Create <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> SHOP: Add second supplier payment
-  SHOP ->> SHOP: Create second <PaymentRequest>
-  SHOP ->> SHOP: Add supplier payment
-  SHOP ->> SHOP: Add third supplier payment
-  SHOP ->> API: Submit <PaymentRequest> batch
-  deactivate SHOP
-  activate API
-  API ->> LEDGER: Check available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Check second available spends
-  LEDGER -->> API: Available spends
-  API -->> API: Confirm funds available
-  API ->> LEDGER: Create four <pending><br/>prisoner debit ledger entries
-  activate LEDGER
-  LEDGER -->> API: Success response
-  API -->> SHOP: Success response
-  SHOP -->> USER: Check details
-  USER ->> SHOP: Confirm details
-  SHOP ->> API: Authorise <PaymentRequest> batch
-  API -) ADI: Append ADI instructions
-  API -->> SHOP: Authorization result
-  deactivate API
-  SHOP -->> USER: Checkout complete
-  SHOP -->> USER: Email receipt
-  ADI ->> SOP: Upload ADI
-  SOP ->> SOP: Write general ledger entries
-  SOP -->> ADI: Success response
-  ADI ->> LEDGER: Set status of ledger entries to processed
-  deactivate LEDGER
+    USER ->> SHOP: Enter order details
+    activate SHOP
+    SHOP ->> SHOP: Create <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> SHOP: Add second supplier payment
+    SHOP ->> SHOP: Create second <PaymentRequest>
+    SHOP ->> SHOP: Add supplier payment
+    SHOP ->> SHOP: Add third supplier payment
+    SHOP ->> API: Submit <PaymentRequest> batch
+    deactivate SHOP
+    activate API
+    API ->> LEDGER: Check available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Check second available spends
+    LEDGER -->> API: Available spends
+    API -->> API: Confirm funds available
+    API ->> LEDGER: Create four <pending><br/>prisoner debit ledger entries
+    activate LEDGER
+    LEDGER -->> API: Success response
+    API -->> SHOP: Success response
+    SHOP -->> USER: Check details
+    USER ->> SHOP: Confirm details
+    SHOP ->> API: Authorise <PaymentRequest> batch
+    API -) ADI: Append ADI instructions
+    API -->> SHOP: Authorization result
+    deactivate API
+    SHOP -->> USER: Checkout complete
+    SHOP -->> USER: Email receipt
+    ADI ->> SOP: Upload ADI
+    SOP ->> SOP: Write general ledger entries
+    SOP -->> ADI: Success response
+    ADI ->> LEDGER: Set status of ledger entries to processed
+    deactivate LEDGER
 ```
