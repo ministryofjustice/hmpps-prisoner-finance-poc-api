@@ -3,11 +3,16 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.LedgerSyncService
+import java.util.UUID
 
 @Service
 class SyncService(
+  private val ledgerSyncService: LedgerSyncService,
   private val requestCaptureService: RequestCaptureService,
   private val syncQueryService: SyncQueryService,
   private val jsonComparator: JsonComparator,
@@ -66,7 +71,18 @@ class SyncService(
       }
     }
 
-    val newPayload = requestCaptureService.captureAndStoreRequest(request)
+    var synchronizedTransactionId: UUID? = null
+
+    when (request) {
+      is SyncOffenderTransactionRequest -> {
+        synchronizedTransactionId = ledgerSyncService.syncOffenderTransaction(request)
+      }
+      is SyncGeneralLedgerTransactionRequest -> {
+        synchronizedTransactionId = ledgerSyncService.syncGeneralLedgerTransaction(request)
+      }
+    }
+
+    val newPayload = requestCaptureService.captureAndStoreRequest(request, synchronizedTransactionId)
     return SyncTransactionReceipt(
       requestId = request.requestId,
       synchronizedTransactionId = newPayload.synchronizedTransactionId,
