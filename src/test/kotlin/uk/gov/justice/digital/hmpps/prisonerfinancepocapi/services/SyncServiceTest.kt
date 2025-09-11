@@ -15,16 +15,20 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models.NomisSyncPayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncTransactionReceipt
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.LedgerSyncService
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
 class SyncServiceTest {
+
+  @Mock
+  private lateinit var generalLedgerService: LedgerSyncService
 
   @Mock
   private lateinit var requestCaptureService: RequestCaptureService
@@ -131,7 +135,7 @@ class SyncServiceTest {
       @Test
       fun `should return PROCESSED if the body JSON is identical`() {
         // Given
-        val newBodyJson = "{\"transactionId\":19228029,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\"}"
+        val newBodyJson = "{\"transactionId\":485368705,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\"}"
         `when`(objectMapper.writeValueAsString(any())).thenReturn(newBodyJson)
         `when`(jsonComparator.areJsonBodiesEqual(any(), any())).thenReturn(true)
 
@@ -150,7 +154,7 @@ class SyncServiceTest {
       @Test
       fun `should return UPDATED if the body JSON is different`() {
         // Given
-        val differentBodyJson = "{\"transactionId\":19228029,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\",\"newField\":\"value\"}"
+        val differentBodyJson = "{\"transactionId\":485368705,\"requestId\":\"c3d4e5f6-a7b8-9012-3456-7890abcdef01\",\"newField\":\"value\"}"
         val updatedPayload = dummyStoredPayload.copy(synchronizedTransactionId = UUID.randomUUID())
         `when`(objectMapper.writeValueAsString(any())).thenReturn(differentBodyJson)
         `when`(jsonComparator.areJsonBodiesEqual(any(), any())).thenReturn(false)

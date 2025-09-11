@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.controllers
+package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.sync
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat

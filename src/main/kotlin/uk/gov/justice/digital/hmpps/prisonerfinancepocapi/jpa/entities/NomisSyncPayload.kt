@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.models
+package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
