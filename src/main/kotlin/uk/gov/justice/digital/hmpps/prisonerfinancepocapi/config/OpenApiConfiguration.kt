@@ -17,7 +17,7 @@ const val TAG_NOMIS_MIGRATION = "NOMIS Migration"
 const val TAG_PRISONER_ACCOUNTS = "Prisoner trust accounts"
 const val TAG_PRISON_ACCOUNTS = "Prison accounts"
 const val TAG_PRISON_REPORTS = "Prison reports"
-const val ROLE_PRISONER_FINANCE_SYNC = "ROLE_TEMPLATE_KOTLIN__UI"
+const val ROLE_PRISONER_FINANCE_SYNC = "ROLE_PRISONER_FINANCE_SYNC__RW"
 
 @Configuration
 class OpenApiConfiguration(buildProperties: BuildProperties) {
