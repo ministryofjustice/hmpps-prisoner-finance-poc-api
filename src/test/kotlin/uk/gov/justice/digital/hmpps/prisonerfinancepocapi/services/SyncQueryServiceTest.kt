@@ -20,9 +20,9 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGenera
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionResponse
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -33,6 +33,9 @@ class SyncQueryServiceTest {
 
   @Mock
   private lateinit var responseMapperService: ResponseMapperService
+
+  @Mock
+  private lateinit var timeConversionService: TimeConversionService
 
   @InjectMocks
   private lateinit var syncQueryService: SyncQueryService
@@ -46,14 +49,14 @@ class SyncQueryServiceTest {
   fun setupGlobalDummies() {
     dummyPayload = NomisSyncPayload(
       id = 1L,
-      timestamp = LocalDateTime.now(ZoneOffset.UTC),
+      timestamp = Instant.now(),
       legacyTransactionId = dummyTransactionId,
       requestId = dummyRequestId,
       caseloadId = "LEI",
       requestTypeIdentifier = "dummy",
       synchronizedTransactionId = dummySyncId,
       body = "{}",
-      transactionTimestamp = LocalDateTime.now(ZoneOffset.UTC),
+      transactionTimestamp = Instant.now(),
     )
   }
 
@@ -62,25 +65,19 @@ class SyncQueryServiceTest {
   inner class FindByRequestIdTests {
     @Test
     fun `should return payload if found by requestId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findByRequestId(any())).thenReturn(dummyPayload)
 
-      // When
       val result = syncQueryService.findByRequestId(dummyRequestId)
 
-      // Then
       assertThat(result).isEqualTo(dummyPayload)
     }
 
     @Test
     fun `should return null if not found by requestId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findByRequestId(any())).thenReturn(null)
 
-      // When
       val result = syncQueryService.findByRequestId(dummyRequestId)
 
-      // Then
       assertThat(result).isNull()
     }
   }
@@ -90,25 +87,19 @@ class SyncQueryServiceTest {
   inner class FindByLegacyTransactionIdTests {
     @Test
     fun `should return payload if found by legacyTransactionId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstByLegacyTransactionIdOrderByTimestampDesc(any())).thenReturn(dummyPayload)
 
-      // When
       val result = syncQueryService.findByLegacyTransactionId(dummyTransactionId)
 
-      // Then
       assertThat(result).isEqualTo(dummyPayload)
     }
 
     @Test
     fun `should return null if not found by legacyTransactionId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstByLegacyTransactionIdOrderByTimestampDesc(any())).thenReturn(null)
 
-      // When
       val result = syncQueryService.findByLegacyTransactionId(dummyTransactionId)
 
-      // Then
       assertThat(result).isNull()
     }
   }
@@ -118,25 +109,19 @@ class SyncQueryServiceTest {
   inner class FindBySynchronizedTransactionIdTests {
     @Test
     fun `should return payload if found by synchronizedTransactionId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any())).thenReturn(dummyPayload)
 
-      // When
       val result = syncQueryService.findNomisSyncPayloadBySynchronizedTransactionId(dummySyncId)
 
-      // Then
       assertThat(result).isEqualTo(dummyPayload)
     }
 
     @Test
     fun `should return null if not found by synchronizedTransactionId`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any())).thenReturn(null)
 
-      // When
       val result = syncQueryService.findNomisSyncPayloadBySynchronizedTransactionId(dummySyncId)
 
-      // Then
       assertThat(result).isNull()
     }
   }
@@ -146,7 +131,6 @@ class SyncQueryServiceTest {
   inner class GeneralLedgerTransactionsTests {
     @Test
     fun `should return mapped general ledger transactions with pagination data`() {
-      // Given
       val requestType = SyncGeneralLedgerTransactionRequest::class.simpleName!!
       val startDate = LocalDate.of(2023, 1, 1)
       val endDate = LocalDate.of(2023, 1, 31)
@@ -177,15 +161,17 @@ class SyncQueryServiceTest {
         1,
       )
 
+      `when`(timeConversionService.toUtcStartOfDay(startDate))
+        .thenReturn(startDate.atStartOfDay().toInstant(java.time.ZoneOffset.UTC))
+      `when`(timeConversionService.toUtcStartOfDay(endDate.plusDays(1)))
+        .thenReturn(endDate.plusDays(1).atStartOfDay().toInstant(java.time.ZoneOffset.UTC))
       `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
         .thenReturn(mockPayloadPage)
       `when`(responseMapperService.mapToGeneralLedgerTransactionResponse(any()))
         .thenReturn(mockResponse)
 
-      // When
       val result = syncQueryService.getGeneralLedgerTransactionsByDate(startDate, endDate, page, size)
 
-      // Then
       assertThat(result.content).hasSize(1)
       assertThat(result.content[0]).isEqualTo(mockResponse)
       assertThat(result.totalElements).isEqualTo(1)
@@ -195,17 +181,17 @@ class SyncQueryServiceTest {
 
     @Test
     fun `should return empty page if no general ledger transactions found`() {
-      // Given
       val page = 0
       val size = 20
       val emptyPage: Page<NomisSyncPayload> = Page.empty()
+
+      `when`(timeConversionService.toUtcStartOfDay(any()))
+        .thenReturn(Instant.now())
       `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
         .thenReturn(emptyPage)
 
-      // When
       val result = syncQueryService.getGeneralLedgerTransactionsByDate(LocalDate.now(), LocalDate.now(), page, size)
 
-      // Then
       assertThat(result).isEmpty()
       assertThat(result.totalElements).isEqualTo(0)
     }
@@ -216,7 +202,6 @@ class SyncQueryServiceTest {
   inner class OffenderTransactionsTests {
     @Test
     fun `should return mapped offender transactions with pagination data`() {
-      // Given
       val requestType = SyncOffenderTransactionRequest::class.simpleName!!
       val startDate = LocalDate.of(2023, 1, 1)
       val endDate = LocalDate.of(2023, 1, 31)
@@ -243,15 +228,17 @@ class SyncQueryServiceTest {
         PageRequest.of(page, size),
         1,
       )
+      `when`(timeConversionService.toUtcStartOfDay(startDate))
+        .thenReturn(startDate.atStartOfDay().toInstant(java.time.ZoneOffset.UTC))
+      `when`(timeConversionService.toUtcStartOfDay(endDate.plusDays(1)))
+        .thenReturn(endDate.plusDays(1).atStartOfDay().toInstant(java.time.ZoneOffset.UTC))
       `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
         .thenReturn(mockPayloadPage)
       `when`(responseMapperService.mapToOffenderTransactionResponse(any()))
         .thenReturn(mockResponse)
 
-      // When
       val result = syncQueryService.getOffenderTransactionsByDate(startDate, endDate, page, size)
 
-      // Then
       assertThat(result.content).hasSize(1)
       assertThat(result.content[0]).isEqualTo(mockResponse)
       assertThat(result.totalElements).isEqualTo(1)
@@ -261,17 +248,17 @@ class SyncQueryServiceTest {
 
     @Test
     fun `should return empty page if no offender transactions found`() {
-      // Given
       val page = 0
       val size = 20
       val emptyPage: Page<NomisSyncPayload> = Page.empty()
+
+      `when`(timeConversionService.toUtcStartOfDay(any()))
+        .thenReturn(Instant.now())
       `when`(nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(any(), any(), any(), any()))
         .thenReturn(emptyPage)
 
-      // When
       val result = syncQueryService.getOffenderTransactionsByDate(LocalDate.now(), LocalDate.now(), page, size)
 
-      // Then
       assertThat(result).isEmpty()
       assertThat(result.totalElements).isEqualTo(0)
     }
@@ -282,7 +269,6 @@ class SyncQueryServiceTest {
   inner class GetGeneralLedgerTransactionByIdTests {
     @Test
     fun `should return mapped general ledger transaction if found`() {
-      // Given
       val requestType = SyncGeneralLedgerTransactionRequest::class.simpleName!!
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = requestType)
       val mockResponse = SyncGeneralLedgerTransactionResponse(
@@ -307,38 +293,30 @@ class SyncQueryServiceTest {
       `when`(responseMapperService.mapToGeneralLedgerTransactionResponse(any()))
         .thenReturn(mockResponse)
 
-      // When
       val result = syncQueryService.getGeneralLedgerTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isEqualTo(mockResponse)
     }
 
     @Test
     fun `should return null if payload not found`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any()))
         .thenReturn(null)
 
-      // When
       val result = syncQueryService.getGeneralLedgerTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isNull()
     }
 
     @Test
     fun `should return null if payload is not a General Ledger transaction`() {
-      // Given
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName)
 
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any()))
         .thenReturn(mockPayload)
 
-      // When
       val result = syncQueryService.getGeneralLedgerTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isNull()
     }
   }
@@ -348,7 +326,6 @@ class SyncQueryServiceTest {
   inner class GetOffenderTransactionByIdTests {
     @Test
     fun `should return mapped offender transaction if found`() {
-      // Given
       val requestType = SyncOffenderTransactionRequest::class.simpleName!!
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = requestType)
       val mockResponse = SyncOffenderTransactionResponse(
@@ -370,38 +347,30 @@ class SyncQueryServiceTest {
       `when`(responseMapperService.mapToOffenderTransactionResponse(any()))
         .thenReturn(mockResponse)
 
-      // When
       val result = syncQueryService.getOffenderTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isEqualTo(mockResponse)
     }
 
     @Test
     fun `should return null if payload not found`() {
-      // Given
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any()))
         .thenReturn(null)
 
-      // When
       val result = syncQueryService.getOffenderTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isNull()
     }
 
     @Test
     fun `should return null if payload is not an Offender transaction`() {
-      // Given
       val mockPayload = dummyPayload.copy(requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName)
 
       `when`(nomisSyncPayloadRepository.findFirstBySynchronizedTransactionIdOrderByTimestampDesc(any()))
         .thenReturn(mockPayload)
 
-      // When
       val result = syncQueryService.getOffenderTransactionById(UUID.randomUUID())
 
-      // Then
       assertThat(result).isNull()
     }
   }

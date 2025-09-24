@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.NomisSyncPayload
-import java.time.LocalDateTime
+import java.time.Instant
 import java.util.UUID
 
 @Repository
@@ -30,8 +30,8 @@ interface NomisSyncPayloadRepository : JpaRepository<NomisSyncPayload, Long> {
     """,
   )
   fun findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-    @Param("startDate") startDate: LocalDateTime,
-    @Param("endDate") endDate: LocalDateTime,
+    @Param("startDate") startDate: Instant,
+    @Param("endDate") endDate: Instant,
     @Param("requestTypeIdentifier") requestTypeIdentifier: String,
     pageable: Pageable,
   ): Page<NomisSyncPayload>

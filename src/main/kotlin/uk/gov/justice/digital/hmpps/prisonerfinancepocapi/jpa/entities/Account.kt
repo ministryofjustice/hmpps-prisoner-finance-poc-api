@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import java.math.BigDecimal
 import java.util.UUID
 
 @Entity
@@ -43,22 +42,4 @@ data class Account(
   @Enumerated(EnumType.STRING)
   @Column(name = "posting_type", nullable = false)
   var postingType: PostingType,
-
-  @Column(name = "initial_debits", nullable = false)
-  var initialDebits: BigDecimal,
-
-  @Column(name = "initial_credits", nullable = false)
-  var initialCredits: BigDecimal,
-
-  @Column(name = "initial_on_hold", nullable = false)
-  var initialOnHold: BigDecimal,
-
-  @Column(name = "total_debits", nullable = false)
-  var totalDebits: BigDecimal,
-
-  @Column(name = "total_credits", nullable = false)
-  var totalCredits: BigDecimal,
-
-  @Column(name = "total_on_hold", nullable = false)
-  var totalOnHold: BigDecimal,
 )

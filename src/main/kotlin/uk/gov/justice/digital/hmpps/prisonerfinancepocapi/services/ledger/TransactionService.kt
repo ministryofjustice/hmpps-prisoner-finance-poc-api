@@ -4,8 +4,6 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.events.TransactionRecordedEvent
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.AccountType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Transaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionEntry
@@ -58,7 +56,7 @@ open class TransactionService(
     val savedEntries = mutableListOf<TransactionEntry>()
 
     entries.forEach { (accountId, amount, entryType) ->
-      val account = accountRepository.findById(accountId)
+      accountRepository.findById(accountId)
         .orElseThrow { IllegalStateException("Account not found with ID: $accountId") }
 
       val entry = TransactionEntry(
@@ -68,42 +66,10 @@ open class TransactionService(
         entryType = entryType,
       )
       savedEntries.add(transactionEntryRepository.save(entry))
-
-      updateAccountBalance(account, transactionType, entryType, amount)
-
-      accountRepository.save(account)
     }
 
     eventPublisher.publishEvent(TransactionRecordedEvent(savedEntries))
 
     return savedTransaction
-  }
-
-  private fun updateAccountBalance(account: Account, transactionType: String, entryType: PostingType, amount: BigDecimal) {
-    if (account.accountType == AccountType.PRISONER) {
-      when (transactionType) {
-        "HOA" -> { // Hold on Account (Add Hold)
-          account.totalDebits = account.totalDebits.add(amount)
-          account.totalOnHold = account.totalOnHold.add(amount)
-        }
-        "HOR" -> { // Hold Off Account (Remove Hold)
-          account.totalCredits = account.totalCredits.add(amount)
-          account.totalOnHold = account.totalOnHold.subtract(amount)
-        }
-        else -> {
-          if (entryType == PostingType.DR) {
-            account.totalDebits = account.totalDebits.add(amount)
-          } else { // CR
-            account.totalCredits = account.totalCredits.add(amount)
-          }
-        }
-      }
-    } else { // GENERAL_LEDGER accounts
-      if (entryType == PostingType.DR) {
-        account.totalDebits = account.totalDebits.add(amount)
-      } else {
-        account.totalCredits = account.totalCredits.add(amount)
-      }
-    }
   }
 }

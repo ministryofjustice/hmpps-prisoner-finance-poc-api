@@ -19,7 +19,7 @@ open class PrisonService(
     val savedPrison = prisonRepository.save(prison)
 
     // Automatically create the core general ledger accounts for the new prison
-    accountService.createGeneralLedgerAccount(savedPrison.id, 2101)
+    accountService.createGeneralLedgerAccount(savedPrison.id!!, 2101)
     accountService.createGeneralLedgerAccount(savedPrison.id, 2102)
     accountService.createGeneralLedgerAccount(savedPrison.id, 2103)
 

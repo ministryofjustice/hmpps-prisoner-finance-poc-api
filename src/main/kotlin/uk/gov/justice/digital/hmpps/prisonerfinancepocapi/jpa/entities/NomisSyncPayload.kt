@@ -8,7 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import java.time.LocalDateTime
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -18,7 +18,8 @@ data class NomisSyncPayload(
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   var id: Long? = null,
 
-  val timestamp: LocalDateTime,
+  @Column(name = "timestamp", nullable = false)
+  val timestamp: Instant,
 
   @Column(name = "legacy_transaction_id")
   val legacyTransactionId: Long?,
@@ -36,7 +37,7 @@ data class NomisSyncPayload(
   val requestTypeIdentifier: String?,
 
   @Column(name = "transaction_timestamp")
-  val transactionTimestamp: LocalDateTime? = null,
+  val transactionTimestamp: Instant? = null,
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column

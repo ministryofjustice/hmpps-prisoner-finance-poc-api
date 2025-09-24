@@ -6,10 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialPrisonerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialPrisonerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerAccountPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
@@ -24,8 +22,7 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
   private lateinit var objectMapper: ObjectMapper
 
   @Test
-  fun `should migrate initial balances including holds and apply a new hold correctly`() {
-    // Arrange: Use unique identifiers for test isolation
+  fun `should migrate point in time balances including holds and apply a new hold correctly`() {
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
 
@@ -35,30 +32,17 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
     val newHoldAmount = BigDecimal("5.00")
     val holdsGLAccountCode = 2199
 
-    // Step 1: Set up the initial hold accounts for the migration
-    val glMigrationRequestBody = InitialGeneralLedgerBalancesRequest(
-      initialBalances = listOf(
-        InitialGeneralLedgerBalance(accountCode = holdsGLAccountCode, balance = initialHoldBalance),
-      ),
-    )
+    val migrateTimestamp = LocalDateTime.of(2025, 9, 18, 16, 0, 0)
+    val transactionTimestamp = LocalDateTime.of(2025, 9, 18, 17, 0, 0)
 
-    webTestClient
-      .post()
-      .uri("/migrate/general-ledger-balances/{prisonId}", prisonId)
-      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
-      .contentType(MediaType.APPLICATION_JSON)
-      .bodyValue(objectMapper.writeValueAsString(glMigrationRequestBody))
-      .exchange()
-      .expectStatus().isOk
-
-    // Step 2: Now, use the prisoner migration endpoint to create the prisoner accounts, including the hold
-    val prisonerMigrationRequestBody = InitialPrisonerBalancesRequest(
+    val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
       prisonId = prisonId,
-      initialBalances = listOf(
-        InitialPrisonerBalance(
+      accountBalances = listOf(
+        PrisonerAccountPointInTimeBalance(
           accountCode = privateCashAccountCode,
           balance = initialAvailableBalance,
           holdBalance = initialHoldBalance,
+          asOfTimestamp = migrateTimestamp,
         ),
       ),
     )
@@ -72,7 +56,6 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    // Step 3: Verify the migrated balances for the prisoner
     webTestClient
       .get()
       .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", prisonNumber, privateCashAccountCode)
@@ -83,12 +66,11 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
       .jsonPath("$.balance").isEqualTo(initialAvailableBalance.toDouble())
       .jsonPath("$.holdBalance").isEqualTo(initialHoldBalance.toDouble())
 
-    // Step 4: Add a new hold via a regular transaction
     val addHoldRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
-      transactionTimestamp = LocalDateTime.of(2025, 9, 18, 16, 57, 11),
-      createdAt = LocalDateTime.of(2025, 9, 18, 16, 57, 11, 971000000),
+      transactionTimestamp = transactionTimestamp,
+      createdAt = transactionTimestamp,
       createdBy = "SOME_USER",
       offenderTransactions = listOf(
         OffenderTransaction(
@@ -103,8 +85,18 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
           amount = newHoldAmount.toDouble(),
           reference = null,
           generalLedgerEntries = listOf(
-            GeneralLedgerEntry(entrySequence = 1, code = privateCashAccountCode, postingType = "DR", amount = newHoldAmount.toDouble()),
-            GeneralLedgerEntry(entrySequence = 2, code = holdsGLAccountCode, postingType = "CR", amount = newHoldAmount.toDouble()),
+            GeneralLedgerEntry(
+              entrySequence = 1,
+              code = privateCashAccountCode,
+              postingType = "DR",
+              amount = newHoldAmount.toDouble(),
+            ),
+            GeneralLedgerEntry(
+              entrySequence = 2,
+              code = holdsGLAccountCode,
+              postingType = "CR",
+              amount = newHoldAmount.toDouble(),
+            ),
           ),
         ),
       ),
@@ -124,7 +116,6 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 5: Verify the final balances after the new hold is applied
     val expectedFinalAvailableBalance = initialAvailableBalance.subtract(newHoldAmount)
     val expectedFinalHoldBalance = initialHoldBalance.add(newHoldAmount)
 
