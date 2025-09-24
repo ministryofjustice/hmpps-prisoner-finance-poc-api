@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -22,8 +23,8 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLed
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -35,6 +36,9 @@ class RequestCaptureServiceTest {
 
   @Mock
   private lateinit var objectMapper: ObjectMapper
+
+  @Mock
+  private lateinit var timeConversionService: TimeConversionService
 
   @InjectMocks
   private lateinit var requestCaptureService: RequestCaptureService
@@ -103,10 +107,12 @@ class RequestCaptureServiceTest {
   inner class CaptureAndStoreRequest {
 
     private val mockedSynchronizedTransactionId = UUID.fromString("a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1")
+    private val mockedTransactionInstant = Instant.now().minus(1, ChronoUnit.DAYS)
 
     @BeforeEach
     fun setupSaveMock() {
-      // Return a new NomisSyncPayload with a mocked ID for the save operation
+      `when`(timeConversionService.toUtcInstant(any())).thenReturn(mockedTransactionInstant)
+
       `when`(nomisSyncPayloadRepository.save(any())).thenAnswer { invocation ->
         val payloadToSave = invocation.getArgument<NomisSyncPayload>(0)
         NomisSyncPayload(
@@ -135,14 +141,14 @@ class RequestCaptureServiceTest {
 
       assertThat(result.id).isEqualTo(1L)
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isNotNull()
-      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
       assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyOffenderTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.transactionTimestamp).isEqualTo(mockedTransactionInstant)
     }
 
     @Test
@@ -163,7 +169,8 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyOffenderTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyOffenderTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncOffenderTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.transactionTimestamp).isEqualTo(mockedTransactionInstant)
     }
 
     @Test
@@ -178,14 +185,14 @@ class RequestCaptureServiceTest {
 
       assertThat(result.id).isEqualTo(1L)
       assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isNotNull()
-      assertThat(capturedPayloadSentToRepo.synchronizedTransactionId).isInstanceOf(UUID::class.java)
 
       assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
       assertThat(capturedPayloadSentToRepo.legacyTransactionId).isEqualTo(dummyGeneralLedgerTransactionRequest.transactionId)
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.transactionTimestamp).isEqualTo(mockedTransactionInstant)
     }
 
     @Test
@@ -206,7 +213,8 @@ class RequestCaptureServiceTest {
       assertThat(capturedPayloadSentToRepo.requestId).isEqualTo(dummyGeneralLedgerTransactionRequest.requestId)
       assertThat(capturedPayloadSentToRepo.caseloadId).isEqualTo(dummyGeneralLedgerTransactionRequest.caseloadId)
       assertThat(capturedPayloadSentToRepo.requestTypeIdentifier).isEqualTo(SyncGeneralLedgerTransactionRequest::class.simpleName)
-      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(LocalDateTime.now(ZoneOffset.UTC), org.assertj.core.api.Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+      assertThat(capturedPayloadSentToRepo.transactionTimestamp).isEqualTo(mockedTransactionInstant)
     }
   }
 
@@ -217,7 +225,7 @@ class RequestCaptureServiceTest {
     private val dummyPayloads = listOf(
       NomisSyncPayload(
         id = 1L,
-        timestamp = LocalDateTime.now(ZoneOffset.UTC).minusDays(1),
+        timestamp = Instant.now().minus(1, ChronoUnit.DAYS),
         legacyTransactionId = 101,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = UUID.randomUUID(),
@@ -227,7 +235,7 @@ class RequestCaptureServiceTest {
       ),
       NomisSyncPayload(
         id = 2L,
-        timestamp = LocalDateTime.now(ZoneOffset.UTC).minusHours(1),
+        timestamp = Instant.now().minus(1, ChronoUnit.HOURS),
         legacyTransactionId = 102,
         requestId = UUID.randomUUID(),
         synchronizedTransactionId = UUID.randomUUID(),

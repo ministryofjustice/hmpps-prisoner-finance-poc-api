@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerAccountPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
@@ -23,28 +25,25 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
 
   @Test
   fun `should correctly aggregate initial balance and a new transaction in the general ledger`() {
-    // Arrange: Use unique identifiers for test isolation
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
 
-    // Account codes from the legacy system
     val offenderSpendsAccountCode = 2102
     val prisonSpendsGLAccountCode = 2102
     val prisonBankGLAccountCode = 1501
 
-    val initialGLBalance = BigDecimal("1000.00")
+    val initialPrisonerBalance = BigDecimal("1000.00")
     val transactionAmount = BigDecimal("50.00")
 
-    // Step 1: Migrate the initial GL balance
-    val glMigrationRequestBody = InitialGeneralLedgerBalancesRequest(
-      initialBalances = listOf(
-        InitialGeneralLedgerBalance(
-          accountCode = prisonSpendsGLAccountCode,
-          balance = initialGLBalance,
-        ),
-        InitialGeneralLedgerBalance(
+    val migrateTimestamp = LocalDateTime.of(2025, 6, 1, 23, 59, 59)
+    val transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17)
+
+    val glMigrationRequestBody = GeneralLedgerBalancesSyncRequest(
+      accountBalances = listOf(
+        GeneralLedgerPointInTimeBalance(
           accountCode = prisonBankGLAccountCode,
-          balance = initialGLBalance.negate(),
+          balance = initialPrisonerBalance,
+          asOfTimestamp = migrateTimestamp,
         ),
       ),
     )
@@ -58,22 +57,41 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    // Verify that the initial GL balance was set correctly
+    val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
+      prisonId = prisonId,
+      accountBalances = listOf(
+        PrisonerAccountPointInTimeBalance(
+          accountCode = offenderSpendsAccountCode,
+          balance = initialPrisonerBalance,
+          holdBalance = BigDecimal.ZERO,
+          asOfTimestamp = migrateTimestamp,
+        ),
+      ),
+    )
+
+    webTestClient
+      .post()
+      .uri("/migrate/prisoner-balances/{prisonNumber}", prisonNumber)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .contentType(MediaType.APPLICATION_JSON)
+      .bodyValue(objectMapper.writeValueAsString(prisonerMigrationRequestBody))
+      .exchange()
+      .expectStatus().isOk
+
     webTestClient
       .get()
-      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonSpendsGLAccountCode)
+      .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", prisonNumber, offenderSpendsAccountCode)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.balance").isEqualTo(initialGLBalance.toDouble())
+      .jsonPath("$.balance").isEqualTo(initialPrisonerBalance.toDouble())
 
-    // Step 2: Sync a new offender transaction
     val offenderTransactionRequest = SyncOffenderTransactionRequest(
       transactionId = Random.Default.nextLong(),
       caseloadId = prisonId,
-      transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17),
-      createdAt = LocalDateTime.of(2025, 6, 2, 0, 8, 17, 830000000),
+      transactionTimestamp = transactionTimestamp,
+      createdAt = transactionTimestamp,
       createdBy = "OMS_OWNER",
       offenderTransactions = listOf(
         OffenderTransaction(
@@ -120,8 +138,7 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 3: Calculate and verify the new GL balance
-    val expectedGLBalance = initialGLBalance.add(transactionAmount)
+    val expectedGLBalance = initialPrisonerBalance.add(transactionAmount)
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonSpendsGLAccountCode)
@@ -131,7 +148,7 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(expectedGLBalance.toDouble())
 
-    // Step 4: Verify the prisoner's account balance
+    val expectedPrisonerBalance = initialPrisonerBalance.add(transactionAmount)
     webTestClient
       .get()
       .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", prisonNumber, offenderSpendsAccountCode)
@@ -139,6 +156,6 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.balance").isEqualTo(transactionAmount.toDouble())
+      .jsonPath("$.balance").isEqualTo(expectedPrisonerBalance.toDouble())
   }
 }

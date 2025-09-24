@@ -21,7 +21,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
 
   @Test
   fun `should generate a report with multiple payments and receipts for the same day`() {
-    // Arrange: Define identifiers and transaction amounts
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
     val prisonBankGLAccountCode = 1501
@@ -30,7 +29,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
 
     val dateOfTransactions = LocalDate.of(2025, 9, 22)
 
-    // Receipt 1
     val receipt1Amount = BigDecimal("2.3")
     val receipt1Request = SyncOffenderTransactionRequest(
       transactionId = 485261420,
@@ -63,7 +61,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
       lastModifiedByDisplayName = null,
     )
 
-    // Receipt 2
     val receipt2Amount = BigDecimal("5.0")
     val receipt2Request = SyncOffenderTransactionRequest(
       transactionId = 485261421,
@@ -96,7 +93,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
       lastModifiedByDisplayName = null,
     )
 
-    // Payment 1
     val payment1Amount = BigDecimal("10.00")
     val payment1Request = SyncOffenderTransactionRequest(
       transactionId = 485439414,
@@ -129,7 +125,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
       lastModifiedByDisplayName = null,
     )
 
-    // Payment 2
     val payment2Amount = BigDecimal("5.00")
     val payment2Request = SyncOffenderTransactionRequest(
       transactionId = 485439415,
@@ -162,7 +157,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
       lastModifiedByDisplayName = null,
     )
 
-    // Step 2: Post all transactions
     webTestClient
       .post()
       .uri("/sync/offender-transactions")
@@ -199,7 +193,6 @@ class SummaryOfPaymentsAndReceiptsReportTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 3: Call the report endpoint and verify the results
     val totalReceipts = receipt1Amount + receipt2Amount
     val totalPayments = payment1Amount + payment2Amount
 

@@ -11,9 +11,6 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGenera
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionResponse
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.reflect.KClass
 
@@ -21,6 +18,7 @@ import kotlin.reflect.KClass
 class SyncQueryService(
   private val nomisSyncPayloadRepository: NomisSyncPayloadRepository,
   private val responseMapperService: ResponseMapperService,
+  private val timeConversionService: TimeConversionService,
 ) {
 
   fun findByRequestId(requestId: UUID): NomisSyncPayload? = nomisSyncPayloadRepository.findByRequestId(requestId)
@@ -79,14 +77,12 @@ class SyncQueryService(
     requestType: KClass<*>,
     pageable: Pageable,
   ): Page<NomisSyncPayload> {
-    val userZone = ZoneId.of("Europe/London")
-
-    val startOfUserDayInUtc = ZonedDateTime.of(startDate.atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
-    val endOfUserDayInUtc = ZonedDateTime.of(endDate.plusDays(1).atStartOfDay(), userZone).withZoneSameInstant(ZoneOffset.UTC)
+    val startInstant = timeConversionService.toUtcStartOfDay(startDate)
+    val endInstant = timeConversionService.toUtcStartOfDay(endDate.plusDays(1))
 
     return nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-      startOfUserDayInUtc.toLocalDateTime(),
-      endOfUserDayInUtc.toLocalDateTime(),
+      startInstant,
+      endInstant,
       requestType.simpleName!!,
       pageable,
     )

@@ -21,10 +21,9 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
 
   @Test
   fun `should correctly apply a hold and update balances accordingly`() {
-    // Arrange: Define identifiers and initial transaction data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
-    val offenderAccountCode = 2101 // Assuming Cash is account 2101
+    val offenderAccountCode = 2101
     val prisonBankGLAccountCode = 1104
     val prisonCashGLAccountCode = 2101
     val holdGLAccountCode = 2199
@@ -32,7 +31,6 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
     val initialCreditAmount = BigDecimal("50.00")
     val holdAmount = BigDecimal("10.00")
 
-    // Step 1: Create a transaction to give the prisoner an initial balance of £50.00
     val initialBalanceRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -73,7 +71,6 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Verify initial balance is £50.00, hold balance is £0.00
     webTestClient
       .get()
       .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", prisonNumber, offenderAccountCode)
@@ -84,7 +81,6 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
       .jsonPath("$.balance").isEqualTo(initialCreditAmount.toDouble())
       .jsonPath("$.holdBalance").isEqualTo(BigDecimal.ZERO.toDouble())
 
-    // Step 2: Create a transaction to add a hold of £10.00
     val addHoldRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -98,7 +94,7 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
           offenderDisplayId = prisonNumber,
           offenderBookingId = 1227181,
           subAccountType = "REG",
-          postingType = "DR", // A debit to the prisoner's available balance
+          postingType = "DR",
           type = "HOA",
           description = "HOLD",
           amount = holdAmount.toDouble(),
@@ -125,7 +121,6 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 3: Verify the balances after the hold is applied
     val expectedOffenderTotalBalance = initialCreditAmount.subtract(holdAmount)
     val expectedOffenderHoldBalance = holdAmount
 
@@ -139,7 +134,6 @@ class SyncOffenderAddHoldTest : IntegrationTestBase() {
       .jsonPath("$.balance").isEqualTo(expectedOffenderTotalBalance.toDouble())
       .jsonPath("$.holdBalance").isEqualTo(expectedOffenderHoldBalance.toDouble())
 
-    // Step 4: Verify the GL accounts are updated correctly
     val expectedGLCashBalance = initialCreditAmount.subtract(holdAmount)
     webTestClient
       .get()

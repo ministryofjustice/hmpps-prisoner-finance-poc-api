@@ -1,4 +1,3 @@
-// src/main/kotlin/uk/gov/justice.digital.hmpps.prisonerfinancepocapi/controllers/migration/MigrationController.kt
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.controllers.migration
 
 import io.swagger.v3.oas.annotations.Operation
@@ -19,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_MIGRATION
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialPrisonerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.migration.MigrationService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
@@ -29,8 +28,8 @@ import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 class MigrationController(@param:Autowired private val migrationService: MigrationService) {
 
   @Operation(
-    summary = "Migrate initial general ledger balances for a single prison",
-    description = "Initializes or updates general ledger accounts for a specific prison with a starting balance. This endpoint is idempotent and can be re-run.",
+    summary = "Migrate general ledger balances for a single prison",
+    description = "Migrate general ledger account balances for a specific prison.",
   )
   @PostMapping(
     path = ["/migrate/general-ledger-balances/{prisonId}"],
@@ -40,7 +39,7 @@ class MigrationController(@param:Autowired private val migrationService: Migrati
     value = [
       ApiResponse(
         responseCode = "200",
-        description = "Initial general ledger balances successfully migrated.",
+        description = "General ledger balances successfully migrated.",
       ),
       ApiResponse(
         responseCode = "400",
@@ -68,15 +67,15 @@ class MigrationController(@param:Autowired private val migrationService: Migrati
   @PreAuthorize("hasAnyAuthority('${ROLE_PRISONER_FINANCE_SYNC}')")
   fun migrateGeneralLedgerBalances(
     @PathVariable prisonId: String,
-    @RequestBody @Valid request: InitialGeneralLedgerBalancesRequest,
+    @RequestBody @Valid request: GeneralLedgerBalancesSyncRequest,
   ): ResponseEntity<Void> {
     migrationService.migrateGeneralLedgerBalances(prisonId, request)
     return ResponseEntity.ok().build()
   }
 
   @Operation(
-    summary = "Migrate initial balances for a single prisoner",
-    description = "Initializes or updates a prisoner's sub-accounts (e.g., Spends, Private Cash) with a starting balance. This endpoint is idempotent and can be re-run. The prison must already exist.",
+    summary = "Migrate a prisoners balances",
+    description = "Migrate a prisoners sub-accounts (e.g., Spends, Private Cash) to a given balance from a legacy system.",
   )
   @PostMapping(
     path = ["/migrate/prisoner-balances/{prisonNumber}"],
@@ -86,7 +85,7 @@ class MigrationController(@param:Autowired private val migrationService: Migrati
     value = [
       ApiResponse(
         responseCode = "200",
-        description = "Initial prisoner balances successfully migrated.",
+        description = "Prisoner balances successfully migrated.",
       ),
       ApiResponse(
         responseCode = "400",
@@ -114,7 +113,7 @@ class MigrationController(@param:Autowired private val migrationService: Migrati
   @PreAuthorize("hasAnyAuthority('${ROLE_PRISONER_FINANCE_SYNC}')")
   fun migratePrisonerBalances(
     @PathVariable prisonNumber: String,
-    @RequestBody @Valid request: InitialPrisonerBalancesRequest,
+    @RequestBody @Valid request: PrisonerBalancesSyncRequest,
   ): ResponseEntity<Void> {
     migrationService.migratePrisonerBalances(prisonNumber, request)
     return ResponseEntity.ok().build()

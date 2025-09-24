@@ -51,14 +51,12 @@ class SyncService(
       )
 
       if (isBodyIdentical) {
-        // If bodies are identical, we don't need to create a new record.
         return SyncTransactionReceipt(
           requestId = request.requestId,
           synchronizedTransactionId = existingPayloadByTransactionId.synchronizedTransactionId,
           action = SyncTransactionReceipt.Action.PROCESSED,
         )
       } else {
-        // If bodies are different, save the new record and use the existing synchronizedTransactionId.
         val newPayload = requestCaptureService.captureAndStoreRequest(
           request,
           existingPayloadByTransactionId.synchronizedTransactionId,
