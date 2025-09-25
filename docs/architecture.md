@@ -2,73 +2,61 @@
 C4Container
     title Prisoner Finance - Containers
 
+    Person(Prisoner, "Prisoner")
     Person(PrisonerFinanceUser, "Prisoner Finance User")
-    
-    System_Boundary("Bank", "Bank") {
+    Person(MtpUsers, "People outside of prison")
 
-        System_Ext(GovPay, "GOV Pay")
-        System_Ext(HMPPSBankAccount, "HMPPS Bank Account")
-        System_Ext(TrustBankAccount, "Trust Bank Account")
-        System_Ext(SOPGeneralLedger, "SOP General Ledger")
-    }
-
-    System_Boundary("PrisonerFinanceSystem", "Prisoner Finance System") {
-        Container(CoreAccounting, "Core Accounting")
-        Container(PaymentsService, "Payments Service")
-        Container(GeneralTaskService, "General Task Service")
-        Container(SpecialistTaskServices, "Specialist Task Services")
-        ContainerDb(GeneralLedgerDB, "General Ledger Database")
+    Enterprise_Boundary("Shops_boundary", "Prisoner facing services") {
+        System_Ext(Launchpad, "Launchpad")
     }
     
     Enterprise_Boundary("DPS_boundary", "Digital Prison Services") {
-        System_Ext(PrisonerProfileAPI, "Prisoner Profile API")
-        System_Ext(SendMoneyService, "Send Money to Prisoners Service")
+        System_Ext(IntegrationAPI, "Integration API")
+        System_Ext(PrisonerProfileAPI, "Prisoner profile API")
+        System_Ext(MoneyToPrisonerAPI, "Money to prisoner API")
         System_Ext(ActivitiesService, "Activities Service")
-        System_Ext(ExternalIntegrationAPI, "External Integration API")
     }
 
-    Enterprise_Boundary("Shops_boundary", "Shops") {
-        System_Ext(LaunchpadCanteen, "Launchpad/Canteen")
+    System_Boundary("PrisonerFinanceSystem", "Prisoner finance system") {
+        Container(PaymentsApi, "Payments API")
+        Container(CoreAccounting, "Core accounting API")
+        ContainerDb(GeneralLedgerDB, "General ledger")
     }
 
-    Enterprise_Boundary("DPSBoundary", "Hmpps Domain Events") {
-        System_Ext(DpsPrisonerEvents, "DPS Prisoner Events")
-        System_Ext(PrisonerLocation, "Prisoner Location")
-        System_Ext(PrisonerAdjudications, "Prisoner Adjudications")
-        System_Ext(PrisonerProfileData, "Prisoner Profile")
+    Enterprise_Boundary("DPSBoundary", "HMPPS central services") {
+        System_Ext(DpsPrisonerEvents, "HMPPS domain events")
+        System_Ext(HMPPSAuth, "HMPPS auth and audit")
+    }
+    
+    Enterprise_Boundary("CentralGovernmentServices", "Central government services") {
+        System_Ext(Sop, "SOP general ledger")
+        System_Ext(GovPay, "GOV pay")
+    }
+ 
+    Enterprise_Boundary("Bank", "Bank") {
+        System_Ext(HMPPSBankAccount, "HMPPS bank account")
+        System_Ext(TrustBankAccount, "Trust bank account")
     }
 
-    Enterprise_Boundary("ExternalVendors_boundary", "External Vendors") {
+    Enterprise_Boundary("ExternalVendors_boundary", "External vendors") {
         System_Ext(BTService, "BT")
         System_Ext(DHLService, "DHL")
     }
 
-    Rel(PrisonerFinanceUser, GeneralTaskService, "")
-    Rel(PrisonerFinanceUser, SpecialistTaskServices, "")
-    Rel(SendMoneyService, CoreAccounting, "")
-    Rel(ActivitiesService, CoreAccounting, "")
-    Rel(PrisonerProfileAPI, CoreAccounting, "")
-    Rel(GeneralTaskService, CoreAccounting, "")
-    Rel(SpecialistTaskServices, CoreAccounting, "")
-    Rel(CoreAccounting, PaymentsService, "")
-    Rel(PaymentsService, CoreAccounting, "")
-    Rel(PaymentsService, ExternalIntegrationAPI, "")
-    Rel(ExternalIntegrationAPI, LaunchpadCanteen, "")
-    Rel(ExternalIntegrationAPI, BTService, "")
-    Rel(ExternalIntegrationAPI, DHLService, "")
-    Rel(CoreAccounting, GeneralLedgerDB, "")
-    Rel(GeneralLedgerDB, SOPGeneralLedger, "")
+    Rel(Prisoner, Launchpad,  "")
+    Rel(Launchpad, IntegrationAPI, "")
+    Rel(IntegrationAPI, PaymentsApi,  "")
+
+    Rel(MtpUsers, MoneyToPrisonerAPI, "Send money to someone in prison") 
+    Rel(MoneyToPrisonerAPI, GovPay, "")
     Rel(GovPay, HMPPSBankAccount, "")
-    Rel(GovPay, TrustBankAccount, "")
-    Rel(HMPPSBankAccount, SOPGeneralLedger, "")
-    Rel(TrustBankAccount, SOPGeneralLedger, "")
-    Rel(TrustBankAccount, SOPGeneralLedger, "")
-    Rel(PrisonerLocation, DpsPrisonerEvents, "")
-    Rel(PrisonerAdjudications, DpsPrisonerEvents, "")
-    Rel(PrisonerProfileData, DpsPrisonerEvents, "")
-    Rel(DpsPrisonerEvents, SpecialistTaskServices, "")
-    Rel(GeneralTaskService, PrisonerProfileAPI, "")
-    Rel(SpecialistTaskServices, PrisonerProfileAPI, "")
+
+    
+    Rel(ActivitiesService, PaymentsApi, "")
+
+    Rel(BTService, IntegrationAPI, "")
+    Rel(DHLService, IntegrationAPI, "")
+    
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
