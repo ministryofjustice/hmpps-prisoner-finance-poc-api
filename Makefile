@@ -31,7 +31,7 @@ stop-clean:
 unit-test:
 	./gradlew unitTest
 
-integration-test: serve
+integration-test:
 	./gradlew integrationTest --warning-mode all
 
 test: unit-test integration-test
