@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.AccountType
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountCodeLookupRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
@@ -12,10 +11,9 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.Trans
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetails
-import java.math.BigDecimal
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
 import java.sql.Timestamp
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.util.UUID
 
 @Service
@@ -26,28 +24,32 @@ open class LedgerQueryService(
   private val transactionEntryRepository: TransactionEntryRepository,
   private val accountCodeLookupRepository: AccountCodeLookupRepository,
   private val transactionDetailsMapper: TransactionDetailsMapper,
+  private val ledgerBalanceService: LedgerBalanceService,
+  private val timeConversionService: TimeConversionService,
 ) {
 
   fun getPrisonerSubAccountDetails(prisonNumber: String, accountCode: Int): PrisonerSubAccountDetails? {
     val account = findPrisonerAccount(prisonNumber, accountCode)
     return account?.let {
+      val (totalBalance, holdBalance) = ledgerBalanceService.calculatePrisonerAccountBalances(it)
       PrisonerSubAccountDetails(
         code = it.accountCode,
         name = it.subAccountType ?: it.name,
         prisonNumber = prisonNumber,
-        balance = calculateBalance(it),
-        holdBalance = it.initialOnHold.add(it.totalOnHold),
+        balance = totalBalance,
+        holdBalance = holdBalance,
       )
     }
   }
 
   fun listPrisonerSubAccountDetails(prisonNumber: String): List<PrisonerSubAccountDetails> = accountRepository.findByPrisonNumber(prisonNumber).map { account ->
+    val (totalBalance, holdBalance) = ledgerBalanceService.calculatePrisonerAccountBalances(account)
     PrisonerSubAccountDetails(
       code = account.accountCode,
       name = account.subAccountType ?: account.name,
       prisonNumber = prisonNumber,
-      balance = calculateBalance(account),
-      holdBalance = account.initialOnHold.add(account.totalOnHold),
+      balance = totalBalance,
+      holdBalance = holdBalance,
     )
   }
 
@@ -63,7 +65,7 @@ open class LedgerQueryService(
         prisonId = prisonId,
         classification = accountCodeLookup.classification,
         postingType = it.postingType.name,
-        balance = calculateBalance(it),
+        balance = ledgerBalanceService.calculateGeneralLedgerAccountBalance(it),
       )
     }
   }
@@ -82,14 +84,16 @@ open class LedgerQueryService(
         prisonId = prisonId,
         classification = accountCodeLookup.classification,
         postingType = account.postingType.name,
-        balance = calculateBalance(account),
+        balance = ledgerBalanceService.calculateGeneralLedgerAccountBalance(account),
       )
     }
   }
 
   fun listPrisonerSubAccountTransactions(prisonNumber: String, accountCode: Int): List<TransactionDetails> {
     val account = findPrisonerAccount(prisonNumber, accountCode) ?: return emptyList()
+
     val transactionEntries = transactionEntryRepository.findByAccountId(account.id!!)
+
     if (transactionEntries.isEmpty()) {
       return emptyList()
     }
@@ -104,22 +108,42 @@ open class LedgerQueryService(
 
   fun listPrisonAccountTransactions(prisonId: String, accountCode: Int, date: LocalDate?): List<TransactionDetails> {
     val account = findPrisonAccount(prisonId, accountCode) ?: return emptyList()
-    val transactionEntries = if (date != null) {
-      val dateStart = date.atStartOfDay(ZoneOffset.UTC)
-      val dateEnd = date.plusDays(1).atStartOfDay(ZoneOffset.UTC)
-      transactionEntryRepository.findByDateBetweenAndAccountIdIn(Timestamp.from(dateStart.toInstant()), Timestamp.from(dateEnd.toInstant()), listOf(account.id!!))
-    } else {
-      transactionEntryRepository.findByAccountId(account.id!!)
-    }
-    if (transactionEntries.isEmpty()) {
+
+    val allAccountEntries = transactionEntryRepository.findByAccountId(account.id!!)
+    if (allAccountEntries.isEmpty()) {
       return emptyList()
     }
-    val transactionIds = transactionEntries.map { it.transactionId }.distinct()
+
+    val transactionIds = if (date != null) {
+      val dateStartInstant = timeConversionService.toUtcStartOfDay(date)
+      val dateEndInstant = timeConversionService.toUtcStartOfDay(date.plusDays(1))
+
+      transactionRepository.findByDateBetween(
+        Timestamp.from(dateStartInstant),
+        Timestamp.from(dateEndInstant),
+      )
+        .map { it.id!! }
+        .intersect(allAccountEntries.map { it.transactionId }.toSet())
+    } else {
+      allAccountEntries.map { it.transactionId }.distinct()
+    }
+
+    if (transactionIds.isEmpty()) {
+      return emptyList()
+    }
+
     val transactions = transactionRepository.findAllById(transactionIds).associateBy { it.id }
+    val transactionEntries = allAccountEntries.filter { it.transactionId in transactionIds }
+
     return transactionIds.mapNotNull { transactionId ->
       val transaction = transactions[transactionId] ?: return@mapNotNull null
       val entriesForTransaction = transactionEntries.filter { it.transactionId == transactionId }
-      transactionDetailsMapper.mapToTransactionDetails(transaction, entriesForTransaction)
+
+      if (entriesForTransaction.isNotEmpty()) {
+        transactionDetailsMapper.mapToTransactionDetails(transaction, entriesForTransaction)
+      } else {
+        null
+      }
     }
   }
 
@@ -143,19 +167,6 @@ open class LedgerQueryService(
       return emptyList()
     }
     return listOf(transactionDetailsMapper.mapToTransactionDetails(transaction, transactionEntries))
-  }
-
-  private fun calculateBalance(account: Account): BigDecimal {
-    val initialNetBalance = when (account.postingType) {
-      PostingType.DR -> account.initialDebits.subtract(account.initialCredits)
-      PostingType.CR -> account.initialCredits.subtract(account.initialDebits)
-    }
-
-    val transactionNetBalance = when (account.postingType) {
-      PostingType.DR -> account.totalDebits.subtract(account.totalCredits)
-      PostingType.CR -> account.totalCredits.subtract(account.totalDebits)
-    }
-    return initialNetBalance.add(transactionNetBalance)
   }
 
   private fun findPrisonAccount(prisonId: String, accountCode: Int): Account? {

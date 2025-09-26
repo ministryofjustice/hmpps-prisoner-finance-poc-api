@@ -6,8 +6,8 @@ import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonAccountDetails
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import java.math.BigDecimal
@@ -17,10 +17,8 @@ import kotlin.random.Random
 
 class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase() {
 
-  // --- Test 1: Debit to a DR (Asset) account increases its balance ---
   @Test
   fun `Given a debit posting to an asset account, the balance increases as expected`() {
-    // Define test data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val debitAccountCode = 1501 // Asset account, DR posting type
     val creditAccountCode = 2501 // Liability account, CR posting type
@@ -33,7 +31,6 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     // A credit posting to a Liability (CR) account increases its balance.
     val expectedFinalCreditBalance = initialCreditBalance.add(transactionAmount)
 
-    // Run the transaction and verify balances
     executeGlTransactionAndVerifyBalances(
       prisonId = prisonId,
       debitAccountCode = debitAccountCode,
@@ -48,10 +45,8 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     )
   }
 
-  // --- Test 2: Credit to a CR (Liability) account increases its balance ---
   @Test
   fun `Given a credit posting to a liability account, the balance increases as expected`() {
-    // Define test data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val debitAccountCode = 4102 // Disbursement account, DR posting type
     val creditAccountCode = 2501 // Liability account, CR posting type
@@ -64,7 +59,6 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     // A credit posting to a Liability (CR) account increases its balance.
     val expectedFinalCreditBalance = initialCreditBalance.add(transactionAmount)
 
-    // Run the transaction and verify balances
     executeGlTransactionAndVerifyBalances(
       prisonId = prisonId,
       debitAccountCode = debitAccountCode,
@@ -79,10 +73,8 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     )
   }
 
-  // --- Test 3: Debit to a CR (Liability) account decreases its balance ---
   @Test
   fun `Given a debit posting to a liability account, the balance decreases as expected`() {
-    // Define test data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val debitAccountCode = 2501 // Liability account, CR posting type
     val creditAccountCode = 1101 // Asset account, DR posting type
@@ -95,7 +87,6 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     // A credit posting to an Asset (DR) account decreases its balance.
     val expectedFinalCreditBalance = initialCreditBalance.subtract(transactionAmount)
 
-    // Run the transaction and verify balances
     executeGlTransactionAndVerifyBalances(
       prisonId = prisonId,
       debitAccountCode = debitAccountCode,
@@ -110,13 +101,11 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     )
   }
 
-  // --- Test 4: Credit to a DR (Asset) account decreases its balance ---
   @Test
   fun `Given a credit posting to an asset account, the balance decreases as expected`() {
-    // Define test data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
-    val debitAccountCode = 2501 // This is a Liability account with CR posting type
-    val creditAccountCode = 1101 // This is an Asset account with DR posting type
+    val debitAccountCode = 2501 // Liability account with CR posting type
+    val creditAccountCode = 1101 //  Asset account with DR posting type
     val transactionAmount = BigDecimal("15.00")
     val initialDebitBalance = BigDecimal("300.00")
     val initialCreditBalance = BigDecimal("100.00")
@@ -126,7 +115,6 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     // A credit posting to an Asset (DR) account decreases its balance.
     val expectedFinalCreditBalance = initialCreditBalance.subtract(transactionAmount)
 
-    // Run the transaction and verify balances
     executeGlTransactionAndVerifyBalances(
       prisonId = prisonId,
       debitAccountCode = debitAccountCode,
@@ -153,11 +141,14 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
     debitPostingType: String,
     creditPostingType: String,
   ) {
-    // Step 1: Migrate the initial GL balances
-    val initialBalancesRequest = InitialGeneralLedgerBalancesRequest(
-      initialBalances = listOf(
-        InitialGeneralLedgerBalance(accountCode = debitAccountCode, balance = initialDebitBalance),
-        InitialGeneralLedgerBalance(accountCode = creditAccountCode, balance = initialCreditBalance),
+    val migrateTimestamp = LocalDateTime.of(2025, 9, 18, 8, 0, 0)
+    val transactionTimestamp = LocalDateTime.of(2025, 9, 18, 8, 32, 53)
+
+    val initialBalancesRequest = GeneralLedgerBalancesSyncRequest(
+      accountBalances = listOf(
+
+        GeneralLedgerPointInTimeBalance(accountCode = debitAccountCode, balance = initialDebitBalance, asOfTimestamp = migrateTimestamp),
+        GeneralLedgerPointInTimeBalance(accountCode = creditAccountCode, balance = initialCreditBalance, asOfTimestamp = migrateTimestamp),
       ),
     )
 
@@ -170,7 +161,6 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
       .exchange()
       .expectStatus().isOk
 
-    // Step 2: Post a new, balanced transaction with an idempotent requestId and transactionId
     val glTransactionRequest = SyncGeneralLedgerTransactionRequest(
       transactionId = Random.nextLong(),
       requestId = UUID.randomUUID(),
@@ -181,8 +171,9 @@ class SyncGeneralLedgerTransactionBalanceIntegrationTest : IntegrationTestBase()
         GeneralLedgerEntry(entrySequence = 1, code = debitAccountCode, postingType = debitPostingType, amount = transactionAmount.toDouble()),
         GeneralLedgerEntry(entrySequence = 2, code = creditAccountCode, postingType = creditPostingType, amount = transactionAmount.toDouble()),
       ),
-      transactionTimestamp = LocalDateTime.of(2025, 9, 18, 8, 32, 53),
-      createdAt = LocalDateTime.of(2025, 9, 18, 8, 32, 53),
+
+      transactionTimestamp = transactionTimestamp,
+      createdAt = transactionTimestamp,
       createdBy = "SOMEONE",
       createdByDisplayName = "SOMEONE",
       reference = null, lastModifiedAt = null, lastModifiedBy = null, lastModifiedByDisplayName = null,

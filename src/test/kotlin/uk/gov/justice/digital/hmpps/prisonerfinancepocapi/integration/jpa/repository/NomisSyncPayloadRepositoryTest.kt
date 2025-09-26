@@ -13,7 +13,7 @@ import org.springframework.data.domain.Pageable
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.NomisSyncPayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.util.RepositoryTest
-import java.time.LocalDateTime
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -37,55 +37,55 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     nomisSyncPayloadRepository.deleteAll()
     entityManager.flush()
 
-    val now = LocalDateTime.now()
+    val now = Instant.now()
     val synchronizedTransactionId1 = UUID.randomUUID()
     val synchronizedTransactionId2 = UUID.randomUUID()
 
     payload1 = NomisSyncPayload(
-      timestamp = now.minusMinutes(10),
+      timestamp = now.minus(10, ChronoUnit.MINUTES),
       legacyTransactionId = 1001,
       requestId = UUID.randomUUID(),
       caseloadId = "MDI",
       requestTypeIdentifier = requestType1,
       synchronizedTransactionId = synchronizedTransactionId1,
       body = """{"transactionId":1001,"caseloadId":"MDI","offenderId":123,"eventType":"SyncOffenderTransaction"}""",
-      transactionTimestamp = now.minusDays(5),
+      transactionTimestamp = now.minus(5, ChronoUnit.DAYS),
     )
     entityManager.persistAndFlush(payload1)
 
     payload2 = NomisSyncPayload(
-      timestamp = now.minusMinutes(5),
+      timestamp = now.minus(5, ChronoUnit.MINUTES),
       legacyTransactionId = 1002,
       requestId = UUID.randomUUID(),
       caseloadId = "LEI",
       requestTypeIdentifier = requestType1,
       synchronizedTransactionId = synchronizedTransactionId2,
       body = """{"transactionId":1003,"caseloadId":"LEI","offenderId":456,"eventType":"SyncOffenderTransaction"}""",
-      transactionTimestamp = now.minusDays(3),
+      transactionTimestamp = now.minus(3, ChronoUnit.DAYS),
     )
     entityManager.persistAndFlush(payload2)
 
     payload3 = NomisSyncPayload(
-      timestamp = now.minusMinutes(15),
+      timestamp = now.minus(15, ChronoUnit.MINUTES),
       legacyTransactionId = 1001,
       requestId = UUID.randomUUID(),
       caseloadId = "MDI",
       requestTypeIdentifier = requestType1,
       synchronizedTransactionId = synchronizedTransactionId1,
       body = """{"transactionId":1001,"caseloadId":"MDI","offenderId":123,"eventType":"SyncOffenderTransaction"}""",
-      transactionTimestamp = now.minusDays(5),
+      transactionTimestamp = now.minus(5, ChronoUnit.DAYS),
     )
     entityManager.persistAndFlush(payload3)
 
     payload4 = NomisSyncPayload(
-      timestamp = now.minusMinutes(2),
+      timestamp = now.minus(2, ChronoUnit.MINUTES),
       legacyTransactionId = 1004,
       requestId = UUID.randomUUID(),
       caseloadId = "MDI",
       requestTypeIdentifier = "AnotherSyncType",
       synchronizedTransactionId = UUID.randomUUID(),
       body = """{"transactionId":1004,"caseloadId":"MDI","offenderId":789,"eventType":"AnotherSyncType"}""",
-      transactionTimestamp = now.minusDays(1),
+      transactionTimestamp = now.minus(1, ChronoUnit.DAYS),
     )
     entityManager.persistAndFlush(payload4)
   }
@@ -96,14 +96,14 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     @Test
     fun `should save a NomisSyncPayload`() {
       val newPayload = NomisSyncPayload(
-        timestamp = LocalDateTime.now(),
+        timestamp = Instant.now(),
         legacyTransactionId = 1003,
         requestId = UUID.randomUUID(),
         caseloadId = "DTI",
         requestTypeIdentifier = "NewSyncType",
         synchronizedTransactionId = UUID.randomUUID(),
         body = """{"new":"data"}""",
-        transactionTimestamp = LocalDateTime.now(),
+        transactionTimestamp = Instant.now(),
       )
 
       val savedPayload = nomisSyncPayloadRepository.save(newPayload)
@@ -179,8 +179,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     fun `should find the latest payloads within the date range and by request type`() {
       val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(10),
-        LocalDateTime.now(),
+        Instant.now().minus(10, ChronoUnit.DAYS),
+        Instant.now(),
         requestType1,
         pageable,
       )
@@ -193,8 +193,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     fun `should return empty list if no payloads within the date range`() {
       val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(20),
-        LocalDateTime.now().minusDays(15),
+        Instant.now().minus(20, ChronoUnit.DAYS),
+        Instant.now().minus(15, ChronoUnit.DAYS),
         requestType1,
         pageable,
       )
@@ -206,8 +206,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     fun `should return empty list if no payloads with the request type`() {
       val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(10),
-        LocalDateTime.now(),
+        Instant.now().minus(10, ChronoUnit.DAYS),
+        Instant.now(),
         "NonExistentType",
         pageable,
       )
@@ -219,33 +219,33 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
     fun `should only return the latest payload for each synchronizedTransactionId`() {
       val synchronizedTransactionId = UUID.randomUUID()
       val olderPayload = NomisSyncPayload(
-        timestamp = LocalDateTime.now().minusMinutes(30),
+        timestamp = Instant.now().minus(30, ChronoUnit.MINUTES),
         legacyTransactionId = 1005,
         requestId = UUID.randomUUID(),
         caseloadId = "XYZ",
         requestTypeIdentifier = requestType1,
         synchronizedTransactionId = synchronizedTransactionId,
         body = """{"transactionId":1005,"caseloadId":"XYZ","offenderId":901,"eventType":"SyncOffenderTransaction"}""",
-        transactionTimestamp = LocalDateTime.now().minusDays(2),
+        transactionTimestamp = Instant.now().minus(2, ChronoUnit.DAYS),
       )
       entityManager.persistAndFlush(olderPayload)
 
       val newerPayload = NomisSyncPayload(
-        timestamp = LocalDateTime.now().minusMinutes(10),
+        timestamp = Instant.now().minus(10, ChronoUnit.MINUTES),
         legacyTransactionId = 1005,
         requestId = UUID.randomUUID(),
         caseloadId = "XYZ",
         requestTypeIdentifier = requestType1,
         synchronizedTransactionId = synchronizedTransactionId,
         body = """{"transactionId":1005,"caseloadId":"XYZ","offenderId":901,"eventType":"SyncOffenderTransaction", "updated": true}""",
-        transactionTimestamp = LocalDateTime.now().minusDays(2),
+        transactionTimestamp = Instant.now().minus(2, ChronoUnit.DAYS),
       )
       entityManager.persistAndFlush(newerPayload)
 
       val pageable: Pageable = PageRequest.of(0, 10)
       val found = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(10),
-        LocalDateTime.now(),
+        Instant.now().minus(10, ChronoUnit.DAYS),
+        Instant.now(),
         requestType1,
         pageable,
       )
@@ -270,14 +270,14 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
 
       val payloads = (1..newPayloadCount).map {
         NomisSyncPayload(
-          timestamp = LocalDateTime.now().minusMinutes(it.toLong()),
+          timestamp = Instant.now().minus(it.toLong(), ChronoUnit.MINUTES),
           legacyTransactionId = 1000L + it,
           requestId = UUID.randomUUID(),
           caseloadId = "MDI",
           requestTypeIdentifier = requestType1,
           synchronizedTransactionId = UUID.randomUUID(),
           body = """{"transactionId":100$it,"caseloadId":"MDI","offenderId":123,"eventType":"SyncOffenderTransaction"}""",
-          transactionTimestamp = LocalDateTime.now().minusDays(it.toLong()),
+          transactionTimestamp = Instant.now().minus(it.toLong(), ChronoUnit.DAYS),
         )
       }
       payloads.forEach { entityManager.persistAndFlush(it) }
@@ -285,8 +285,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       // Get first page of 10
       val pageable1: Pageable = PageRequest.of(firstPageNumber, pageSize)
       val foundPage1 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(30),
-        LocalDateTime.now(),
+        Instant.now().minus(30, ChronoUnit.DAYS),
+        Instant.now(),
         requestType1,
         pageable1,
       )
@@ -298,8 +298,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       // Get second page of 10
       val pageable2: Pageable = PageRequest.of(secondPageNumber, pageSize)
       val foundPage2 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(30),
-        LocalDateTime.now(),
+        Instant.now().minus(30, ChronoUnit.DAYS),
+        Instant.now(),
         requestType1,
         pageable2,
       )
@@ -311,8 +311,8 @@ class NomisSyncPayloadRepositoryTest @Autowired constructor(
       // Get last page
       val pageable3: Pageable = PageRequest.of(lastPageNumber, pageSize)
       val foundPage3 = nomisSyncPayloadRepository.findLatestByTransactionTimestampBetweenAndRequestTypeIdentifier(
-        LocalDateTime.now().minusDays(30),
-        LocalDateTime.now(),
+        Instant.now().minus(30, ChronoUnit.DAYS),
+        Instant.now(),
         requestType1,
         pageable3,
       )

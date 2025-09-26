@@ -27,8 +27,8 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
     val offender1DisplayId = generateRandomCode(7)
     val offender2DisplayId = generateRandomCode(7)
 
-    val offenderAccountCode = 2102 // Spends Account
-    val prisonAccountCode = 2102 // Spends GL Account
+    val offenderAccountCode = 2102
+    val prisonAccountCode = 2102
     val nonPrisonerGLAccountCode = 1501
 
     val transactionAmount1 = BigDecimal("5.50")
@@ -36,7 +36,6 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
 
     val totalExpectedBalance = transactionAmount1.add(transactionAmount2)
 
-    // Step 1: Record the first offender transaction
     val transactionRequest1 = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -77,7 +76,6 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 2: Record the second offender transaction for a different prisoner
     val transactionRequest2 = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -118,7 +116,6 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 3: Verify the individual prisoner account balances
     webTestClient
       .get()
       .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", offender1DisplayId, offenderAccountCode)
@@ -137,7 +134,6 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(transactionAmount2.toDouble())
 
-    // Step 4: Verify the aggregated General Ledger account balance
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonAccountCode)

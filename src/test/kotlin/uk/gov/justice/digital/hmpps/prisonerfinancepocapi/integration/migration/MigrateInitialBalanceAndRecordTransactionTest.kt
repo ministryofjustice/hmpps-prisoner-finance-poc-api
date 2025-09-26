@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
@@ -23,18 +23,19 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
 
   @Test
   fun `should_migrate_initial_balance_then_sync_offender_transaction_and_verify_balances`() {
-    // Arrange: Data for initial balance migration
+    val migrateTimestamp = LocalDateTime.of(2025, 6, 1, 0, 0, 0) // Migration occurs first
+    val transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17) // Transaction occurs later
+
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonAccountCode = 1501
     val initialBalance = BigDecimal("-123.45")
 
-    val migrationRequestBody = InitialGeneralLedgerBalancesRequest(
-      initialBalances = listOf(
-        InitialGeneralLedgerBalance(accountCode = prisonAccountCode, balance = initialBalance),
+    val migrationRequestBody = GeneralLedgerBalancesSyncRequest(
+      accountBalances = listOf(
+        GeneralLedgerPointInTimeBalance(accountCode = prisonAccountCode, balance = initialBalance, asOfTimestamp = migrateTimestamp),
       ),
     )
 
-    // Step 1: Migrate the initial balance for the General Ledger account
     webTestClient
       .post()
       .uri("/migrate/general-ledger-balances/{prisonId}", prisonId)
@@ -44,7 +45,6 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    // Verify the initial balance was set correctly
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonAccountCode)
@@ -54,7 +54,6 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(initialBalance.toDouble())
 
-    // Arrange: Data for a new offender transaction
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
     val transactionAmount = BigDecimal("1.25")
     val offenderAccountCode = 2102
@@ -62,8 +61,8 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
     val transactionRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
-      transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17),
-      createdAt = LocalDateTime.of(2025, 6, 2, 0, 8, 17, 830000000),
+      transactionTimestamp = transactionTimestamp,
+      createdAt = transactionTimestamp.plusNanos(830000000),
       createdBy = "OMS_OWNER",
       offenderTransactions = listOf(
         OffenderTransaction(
@@ -90,7 +89,6 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       lastModifiedByDisplayName = null,
     )
 
-    // Step 2: Sync a new offender transaction
     webTestClient
       .post()
       .uri("/sync/offender-transactions")
@@ -103,10 +101,8 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.action").isEqualTo("CREATED")
 
-    // Calculate the expected final balance
     val expectedFinalBalance = initialBalance.add(transactionAmount)
 
-    // Step 3: Verify the final balance of the General Ledger account
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonAccountCode)
@@ -116,7 +112,6 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(expectedFinalBalance.toDouble())
 
-    // Verify the offender's account balance
     webTestClient
       .get()
       .uri("/prisoners/{prisonNumber}/accounts/{offenderAccountCode}", prisonNumber, offenderAccountCode)

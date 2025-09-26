@@ -6,9 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalance
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.InitialGeneralLedgerBalancesRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.UUID
 
 class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
@@ -17,22 +18,20 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
   private lateinit var objectMapper: ObjectMapper
 
   @Test
-  fun `should migrate initial balances for a new prison and retrieve them correctly`() {
-    // Arrange
+  fun `should migrate initial balances for non-prisoner GL accounts correctly`() {
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
-    val accountCode1 = 2101
+    val accountCode1 = 1501 // Receivable For Earnings (Asset)
     val balance1 = BigDecimal("10000.50")
-    val accountCode2 = 1101
+    val accountCode2 = 2501 // Canteen Payable (Liability)
     val balance2 = BigDecimal("-500.25")
 
-    val requestBody = InitialGeneralLedgerBalancesRequest(
-      initialBalances = listOf(
-        InitialGeneralLedgerBalance(accountCode = accountCode1, balance = balance1),
-        InitialGeneralLedgerBalance(accountCode = accountCode2, balance = balance2),
+    val requestBody = GeneralLedgerBalancesSyncRequest(
+      accountBalances = listOf(
+        GeneralLedgerPointInTimeBalance(accountCode = accountCode1, balance = balance1, asOfTimestamp = LocalDateTime.now()),
+        GeneralLedgerPointInTimeBalance(accountCode = accountCode2, balance = balance2, asOfTimestamp = LocalDateTime.now()),
       ),
     )
 
-    // Act: POST request to migrate balances
     webTestClient
       .post()
       .uri("/migrate/general-ledger-balances/{prisonId}", prisonId)
@@ -42,7 +41,6 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    // Assert: GET request to retrieve the first account balance
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, accountCode1)
@@ -52,9 +50,8 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(balance1.toDouble())
       .jsonPath("$.code").isEqualTo(accountCode1)
-      .jsonPath("$.name").isEqualTo("Private Cash")
+      .jsonPath("$.name").isEqualTo("Receivable For Earnings")
 
-    // Assert: GET request to retrieve the second account balance
     webTestClient
       .get()
       .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, accountCode2)
@@ -64,6 +61,6 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.balance").isEqualTo(balance2.toDouble())
       .jsonPath("$.code").isEqualTo(accountCode2)
-      .jsonPath("$.name").isEqualTo("Bank")
+      .jsonPath("$.name").isEqualTo("Canteen Payable")
   }
 }

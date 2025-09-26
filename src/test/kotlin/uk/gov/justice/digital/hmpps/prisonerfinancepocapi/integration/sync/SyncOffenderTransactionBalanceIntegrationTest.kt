@@ -20,7 +20,6 @@ class SyncOffenderTransactionBalanceIntegrationTest : IntegrationTestBase() {
 
   @Test
   fun `given a single offender transaction is synced, the offender and prison account balances should be updated correctly`() {
-    // Define the key identifiers as variables
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val offenderAccountCode = 2102

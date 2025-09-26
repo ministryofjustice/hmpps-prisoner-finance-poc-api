@@ -8,16 +8,14 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.Nomis
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncRequest
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
+import java.time.Instant
 import java.util.UUID
 
 @Service
 class RequestCaptureService(
   private val nomisSyncPayloadRepository: NomisSyncPayloadRepository,
   private val objectMapper: ObjectMapper,
+  private val timeConversionService: TimeConversionService,
 ) {
 
   private companion object {
@@ -37,26 +35,18 @@ class RequestCaptureService(
 
     var caseloadId: String? = null
     var requestTypeIdentifier: String?
-    var transactionTimestamp: LocalDateTime? = null
+    var transactionInstant: Instant? = null
 
     when (requestBodyObject) {
       is SyncOffenderTransactionRequest -> {
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncOffenderTransactionRequest::class.simpleName
-        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
-        val sourceZone = ZoneId.of("Europe/London")
-        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
-          .withZoneSameInstant(ZoneOffset.UTC)
-          .toLocalDateTime()
+        transactionInstant = timeConversionService.toUtcInstant(requestBodyObject.transactionTimestamp)
       }
       is SyncGeneralLedgerTransactionRequest -> {
         caseloadId = requestBodyObject.caseloadId
         requestTypeIdentifier = SyncGeneralLedgerTransactionRequest::class.simpleName
-        val localTransactionTimestamp = requestBodyObject.transactionTimestamp
-        val sourceZone = ZoneId.of("Europe/London")
-        transactionTimestamp = ZonedDateTime.of(localTransactionTimestamp, sourceZone)
-          .withZoneSameInstant(ZoneOffset.UTC)
-          .toLocalDateTime()
+        transactionInstant = timeConversionService.toUtcInstant(requestBodyObject.transactionTimestamp)
       }
       else -> {
         requestTypeIdentifier = requestBodyObject::class.simpleName
@@ -65,14 +55,14 @@ class RequestCaptureService(
     }
 
     val payload = NomisSyncPayload(
-      timestamp = LocalDateTime.now(ZoneOffset.UTC),
+      timestamp = Instant.now(),
       legacyTransactionId = requestBodyObject.transactionId,
       synchronizedTransactionId = synchronizedTransactionId ?: UUID.randomUUID(),
       requestId = requestBodyObject.requestId,
       caseloadId = caseloadId,
       requestTypeIdentifier = requestTypeIdentifier,
       body = rawBodyJson,
-      transactionTimestamp = transactionTimestamp,
+      transactionTimestamp = transactionInstant,
     )
     return nomisSyncPayloadRepository.save(payload)
   }

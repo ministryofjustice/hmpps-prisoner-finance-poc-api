@@ -21,10 +21,9 @@ class SyncOffenderHoldRemovalTest : IntegrationTestBase() {
 
   @Test
   fun `should correctly remove a hold and update balances accordingly`() {
-    // Arrange: Define identifiers and transaction data
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
-    val offenderAccountCode = 2101 // Cash
+    val offenderAccountCode = 2101
     val prisonBankGLAccountCode = 1104
     val prisonCashGLAccountCode = 2101
     val holdGLAccountCode = 2199
@@ -33,7 +32,6 @@ class SyncOffenderHoldRemovalTest : IntegrationTestBase() {
     val holdAmount = BigDecimal("10.00")
     val removalAmount = BigDecimal("10.00")
 
-    // Step 1: Give the prisoner an initial balance
     val initialBalanceRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -74,7 +72,6 @@ class SyncOffenderHoldRemovalTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 2: Add a hold to the account
     val addHoldRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -115,7 +112,6 @@ class SyncOffenderHoldRemovalTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 3: Remove the hold
     val removeHoldRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
       caseloadId = prisonId,
@@ -156,7 +152,6 @@ class SyncOffenderHoldRemovalTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
 
-    // Step 4: Verify the final balances after the hold is removed
     val expectedOffenderFinalBalance = initialCreditAmount
     val expectedOffenderFinalHoldBalance = BigDecimal.ZERO
 
