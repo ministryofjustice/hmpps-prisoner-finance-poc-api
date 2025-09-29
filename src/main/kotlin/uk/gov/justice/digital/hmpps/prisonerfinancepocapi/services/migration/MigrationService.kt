@@ -93,10 +93,10 @@ open class MigrationService(
 
   @Transactional
   open fun migratePrisonerBalances(prisonNumber: String, request: PrisonerBalancesSyncRequest) {
-    val prison = prisonService.getPrison(request.prisonId)
-      ?: prisonService.createPrison(request.prisonId)
-
     request.accountBalances.forEach { balanceData ->
+      val prisonCode = balanceData.prisonId
+      val prison = prisonService.getPrison(prisonCode)
+        ?: prisonService.createPrison(prisonCode)
       val clearingAccount = accountService.findGeneralLedgerAccount(
         prisonId = prison.id!!,
         accountCode = 9999,
@@ -132,7 +132,7 @@ open class MigrationService(
 
         transactionService.recordTransaction(
           transactionType = "OB",
-          description = "Prisoner Available Balance Migration",
+          description = "Prisoner Balance Migration",
           entries = availableEntries,
           transactionTimestamp = transactionTimestamp,
         )

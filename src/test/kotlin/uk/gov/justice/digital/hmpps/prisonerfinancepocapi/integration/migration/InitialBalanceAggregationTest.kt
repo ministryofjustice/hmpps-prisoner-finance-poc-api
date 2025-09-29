@@ -58,9 +58,9 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       .expectStatus().isOk
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
-      prisonId = prisonId,
       accountBalances = listOf(
         PrisonerAccountPointInTimeBalance(
+          prisonId = prisonId,
           accountCode = offenderSpendsAccountCode,
           balance = initialPrisonerBalance,
           holdBalance = BigDecimal.ZERO,

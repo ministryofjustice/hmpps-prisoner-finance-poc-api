@@ -36,9 +36,9 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
     val transactionTimestamp = LocalDateTime.of(2025, 9, 18, 17, 0, 0)
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
-      prisonId = prisonId,
       accountBalances = listOf(
         PrisonerAccountPointInTimeBalance(
+          prisonId = prisonId,
           accountCode = privateCashAccountCode,
           balance = initialAvailableBalance,
           holdBalance = initialHoldBalance,
