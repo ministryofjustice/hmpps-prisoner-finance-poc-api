@@ -28,10 +28,9 @@ class MigratePrisonerBalancesTest : IntegrationTestBase() {
     val savingsBalance = BigDecimal("123.45")
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
-      prisonId = prisonId,
       accountBalances = listOf(
-        PrisonerAccountPointInTimeBalance(accountCode = spendsAccountCode, balance = spendsBalance, holdBalance = BigDecimal.ZERO, asOfTimestamp = LocalDateTime.now()),
-        PrisonerAccountPointInTimeBalance(accountCode = savingsAccountCode, balance = savingsBalance, holdBalance = BigDecimal.ZERO, asOfTimestamp = LocalDateTime.now()),
+        PrisonerAccountPointInTimeBalance(prisonId = prisonId, accountCode = spendsAccountCode, balance = spendsBalance, holdBalance = BigDecimal.ZERO, asOfTimestamp = LocalDateTime.now()),
+        PrisonerAccountPointInTimeBalance(prisonId = prisonId, accountCode = savingsAccountCode, balance = savingsBalance, holdBalance = BigDecimal.ZERO, asOfTimestamp = LocalDateTime.now()),
       ),
     )
 

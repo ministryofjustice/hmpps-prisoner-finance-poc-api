@@ -79,9 +79,9 @@ class BalanceReconciliationTest : IntegrationTestBase() {
       .expectStatus().isCreated
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
-      prisonId = prisonId,
       accountBalances = listOf(
         PrisonerAccountPointInTimeBalance(
+          prisonId = prisonId,
           accountCode = privateCashAccountCode,
           balance = initialAvailableBalance,
           holdBalance = initialHoldBalance,

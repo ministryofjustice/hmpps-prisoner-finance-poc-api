@@ -58,9 +58,9 @@ class MigratePrisonerWithHoldRemovalTest : IntegrationTestBase() {
       .expectStatus().isOk
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
-      prisonId = prisonId,
       accountBalances = listOf(
         PrisonerAccountPointInTimeBalance(
+          prisonId = prisonId,
           accountCode = privateCashAccountCode,
           balance = initialCashBalance,
           holdBalance = initialCashHoldBalance,

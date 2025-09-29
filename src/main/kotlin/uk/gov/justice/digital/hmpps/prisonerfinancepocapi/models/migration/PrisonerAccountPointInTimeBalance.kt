@@ -1,12 +1,17 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration
 
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 @Schema(description = "Represents a prisoner balance at a specific point in time for synchronization from a legacy system.")
 data class PrisonerAccountPointInTimeBalance(
+  @field:NotBlank
+  @field:Schema(description = "The prison code (e.g., 'MDI') where this specific account balance is held.")
+  val prisonId: String,
+
   @field:NotNull
   @field:Schema(description = "The account code for the prisoner account.")
   val accountCode: Int,
