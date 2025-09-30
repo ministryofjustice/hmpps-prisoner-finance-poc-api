@@ -71,13 +71,18 @@ class SyncService(
 
     var synchronizedTransactionId: UUID? = null
 
-    when (request) {
-      is SyncOffenderTransactionRequest -> {
-        synchronizedTransactionId = ledgerSyncService.syncOffenderTransaction(request)
+    try {
+      when (request) {
+        is SyncOffenderTransactionRequest -> {
+          synchronizedTransactionId = ledgerSyncService.syncOffenderTransaction(request)
+        }
+        is SyncGeneralLedgerTransactionRequest -> {
+          synchronizedTransactionId = ledgerSyncService.syncGeneralLedgerTransaction(request)
+        }
       }
-      is SyncGeneralLedgerTransactionRequest -> {
-        synchronizedTransactionId = ledgerSyncService.syncGeneralLedgerTransaction(request)
-      }
+    } catch (e: Exception) {
+      logRequestAsError(request, e)
+      throw e
     }
 
     val newPayload = requestCaptureService.captureAndStoreRequest(request, synchronizedTransactionId)
@@ -86,5 +91,14 @@ class SyncService(
       synchronizedTransactionId = newPayload.synchronizedTransactionId,
       action = SyncTransactionReceipt.Action.CREATED,
     )
+  }
+
+  private fun logRequestAsError(request: SyncRequest, exception: Exception) {
+    val requestJson = try {
+      objectMapper.writeValueAsString(request)
+    } catch (e: Exception) {
+      "Could not serialize request body to JSON for error logging: ${e.message}"
+    }
+    log.error("Error processing sync transaction with requestId: ${request.requestId}, transactionId: ${request.transactionId}. Request body: $requestJson", exception)
   }
 }
