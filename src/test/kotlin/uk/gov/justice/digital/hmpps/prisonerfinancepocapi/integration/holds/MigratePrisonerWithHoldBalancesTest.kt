@@ -43,6 +43,7 @@ class MigratePrisonerWithHoldBalancesTest : IntegrationTestBase() {
           balance = initialAvailableBalance,
           holdBalance = initialHoldBalance,
           asOfTimestamp = migrateTimestamp,
+          transactionId = 1234L,
         ),
       ),
     )

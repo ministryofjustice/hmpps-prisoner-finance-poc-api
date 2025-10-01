@@ -86,6 +86,7 @@ class BalanceReconciliationTest : IntegrationTestBase() {
           balance = initialAvailableBalance,
           holdBalance = initialHoldBalance,
           asOfTimestamp = migrationTimestamp,
+          transactionId = 1234L,
         ),
       ),
     )

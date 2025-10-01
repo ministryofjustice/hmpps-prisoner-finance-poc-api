@@ -65,6 +65,7 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
           balance = initialPrisonerBalance,
           holdBalance = BigDecimal.ZERO,
           asOfTimestamp = migrateTimestamp,
+          transactionId = 1234L,
         ),
       ),
     )
