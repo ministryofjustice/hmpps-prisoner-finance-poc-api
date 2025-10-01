@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.RequestCaptureService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.AccountService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.PrisonService
@@ -17,10 +18,13 @@ open class MigrationService(
   private val accountService: AccountService,
   private val transactionService: TransactionService,
   private val timeConversionService: TimeConversionService,
+  private val requestCaptureService: RequestCaptureService,
 ) {
 
   @Transactional
   open fun migrateGeneralLedgerBalances(prisonId: String, request: GeneralLedgerBalancesSyncRequest) {
+    requestCaptureService.captureGeneralLedgerMigrationRequest(prisonId, request)
+
     val prisonerAccountCodes = listOf(2101, 2102, 2103)
 
     val prison = prisonService.getPrison(prisonId)
@@ -93,6 +97,8 @@ open class MigrationService(
 
   @Transactional
   open fun migratePrisonerBalances(prisonNumber: String, request: PrisonerBalancesSyncRequest) {
+    requestCaptureService.capturePrisonerMigrationRequest(prisonNumber, request)
+
     request.accountBalances.forEach { balanceData ->
       val prisonCode = balanceData.prisonId
       val prison = prisonService.getPrison(prisonCode)

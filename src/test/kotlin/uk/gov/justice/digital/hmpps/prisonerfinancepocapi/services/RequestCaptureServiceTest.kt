@@ -17,12 +17,21 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.MigratedGeneralLedgerBalancePayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.MigratedPrisonerBalancePayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.NomisSyncPayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.MigratedGeneralLedgerBalancePayloadRepository
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.MigratedPrisonerBalancePayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerAccountPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -40,14 +49,30 @@ class RequestCaptureServiceTest {
   @Mock
   private lateinit var timeConversionService: TimeConversionService
 
+  @Mock
+  private lateinit var generalLedgerPayloadRepository: MigratedGeneralLedgerBalancePayloadRepository
+
+  @Mock
+  private lateinit var prisonerBalancePayloadRepository: MigratedPrisonerBalancePayloadRepository
+
   @InjectMocks
   private lateinit var requestCaptureService: RequestCaptureService
 
   @Captor
   private lateinit var nomisSyncPayloadCaptor: ArgumentCaptor<NomisSyncPayload>
 
+  @Captor
+  private lateinit var glPayloadCaptor: ArgumentCaptor<MigratedGeneralLedgerBalancePayload>
+
+  @Captor
+  private lateinit var pbPayloadCaptor: ArgumentCaptor<MigratedPrisonerBalancePayload>
+
   private lateinit var dummyOffenderTransactionRequest: SyncOffenderTransactionRequest
   private lateinit var dummyGeneralLedgerTransactionRequest: SyncGeneralLedgerTransactionRequest
+  private lateinit var dummyGeneralLedgerBalancesSyncRequest: GeneralLedgerBalancesSyncRequest
+  private lateinit var dummyPrisonerBalancesSyncRequest: PrisonerBalancesSyncRequest
+  private val dummyPrisonId = "LEI"
+  private val dummyPrisonerNumber = "A1234AA"
 
   @BeforeEach
   fun setupGlobalDummies() {
@@ -98,6 +123,27 @@ class RequestCaptureServiceTest {
       generalLedgerEntries = listOf(
         GeneralLedgerEntry(entrySequence = 1, code = 1101, postingType = "DR", amount = 50.00),
         GeneralLedgerEntry(entrySequence = 2, code = 2503, postingType = "CR", amount = 50.00),
+      ),
+    )
+    dummyGeneralLedgerBalancesSyncRequest = GeneralLedgerBalancesSyncRequest(
+      accountBalances = listOf(
+        GeneralLedgerPointInTimeBalance(
+          accountCode = 1101,
+          balance = BigDecimal("500.00"),
+          asOfTimestamp = LocalDateTime.now(),
+        ),
+      ),
+    )
+    dummyPrisonerBalancesSyncRequest = PrisonerBalancesSyncRequest(
+      accountBalances = listOf(
+        PrisonerAccountPointInTimeBalance(
+          prisonId = "LEI",
+          accountCode = 2101,
+          balance = BigDecimal("100.00"),
+          holdBalance = BigDecimal("10.00"),
+          asOfTimestamp = LocalDateTime.now(),
+          transactionId = 12345L,
+        ),
       ),
     )
   }
@@ -219,30 +265,74 @@ class RequestCaptureServiceTest {
   }
 
   @Nested
-  @DisplayName("getCapturedNomisSyncPayloads")
-  inner class GetCapturedNomisSyncPayloads {
+  @DisplayName("captureGeneralLedgerMigrationRequest")
+  inner class CaptureGeneralLedgerMigrationRequest {
 
-    private val dummyPayloads = listOf(
-      NomisSyncPayload(
-        id = 1L,
-        timestamp = Instant.now().minus(1, ChronoUnit.DAYS),
-        legacyTransactionId = 101,
-        requestId = UUID.randomUUID(),
-        synchronizedTransactionId = UUID.randomUUID(),
-        caseloadId = "LEI",
-        requestTypeIdentifier = "SyncOffenderTransaction",
-        body = "{}",
-      ),
-      NomisSyncPayload(
-        id = 2L,
-        timestamp = Instant.now().minus(1, ChronoUnit.HOURS),
-        legacyTransactionId = 102,
-        requestId = UUID.randomUUID(),
-        synchronizedTransactionId = UUID.randomUUID(),
-        caseloadId = "BRI",
-        requestTypeIdentifier = "SyncGeneralLedgerBalance",
-        body = "{}",
-      ),
-    )
+    @BeforeEach
+    fun setupSaveMock() {
+      `when`(generalLedgerPayloadRepository.save(any())).thenAnswer { invocation ->
+        val payloadToSave = invocation.getArgument<MigratedGeneralLedgerBalancePayload>(0)
+        MigratedGeneralLedgerBalancePayload(
+          id = 101L,
+          timestamp = payloadToSave.timestamp,
+          prisonId = payloadToSave.prisonId,
+          body = payloadToSave.body,
+        )
+      }
+    }
+
+    @Test
+    fun `should serialize and store GeneralLedgerBalancesSyncRequest`() {
+      val expectedJson = """{"some":"json","from":"GeneralLedgerBalancesSyncRequest"}"""
+      `when`(objectMapper.writeValueAsString(dummyGeneralLedgerBalancesSyncRequest)).thenReturn(expectedJson)
+
+      val result = requestCaptureService.captureGeneralLedgerMigrationRequest(dummyPrisonId, dummyGeneralLedgerBalancesSyncRequest)
+
+      verify(generalLedgerPayloadRepository, times(1)).save(glPayloadCaptor.capture())
+      val capturedPayloadSentToRepo = glPayloadCaptor.value
+
+      assertThat(result.id).isEqualTo(101L)
+      assertThat(capturedPayloadSentToRepo.prisonId).isEqualTo(dummyPrisonId)
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+
+      verify(nomisSyncPayloadRepository, times(0)).save(any())
+    }
+  }
+
+  @Nested
+  @DisplayName("capturePrisonerMigrationRequest")
+  inner class CapturePrisonerMigrationRequest {
+
+    @BeforeEach
+    fun setupSaveMock() {
+      `when`(prisonerBalancePayloadRepository.save(any())).thenAnswer { invocation ->
+        val payloadToSave = invocation.getArgument<MigratedPrisonerBalancePayload>(0)
+        MigratedPrisonerBalancePayload(
+          id = 201L,
+          timestamp = payloadToSave.timestamp,
+          prisonNumber = payloadToSave.prisonNumber,
+          body = payloadToSave.body,
+        )
+      }
+    }
+
+    @Test
+    fun `should serialize and store PrisonerBalancesSyncRequest`() {
+      val expectedJson = """{"some":"json","from":"PrisonerBalancesSyncRequest"}"""
+      `when`(objectMapper.writeValueAsString(dummyPrisonerBalancesSyncRequest)).thenReturn(expectedJson)
+
+      val result = requestCaptureService.capturePrisonerMigrationRequest(dummyPrisonerNumber, dummyPrisonerBalancesSyncRequest)
+
+      verify(prisonerBalancePayloadRepository, times(1)).save(pbPayloadCaptor.capture())
+      val capturedPayloadSentToRepo = pbPayloadCaptor.value
+
+      assertThat(result.id).isEqualTo(201L)
+      assertThat(capturedPayloadSentToRepo.prisonNumber).isEqualTo(dummyPrisonerNumber)
+      assertThat(capturedPayloadSentToRepo.body).isEqualTo(expectedJson)
+      assertThat(capturedPayloadSentToRepo.timestamp).isCloseTo(Instant.now(), Assertions.within(2, ChronoUnit.SECONDS))
+
+      verify(nomisSyncPayloadRepository, times(0)).save(any())
+    }
   }
 }
