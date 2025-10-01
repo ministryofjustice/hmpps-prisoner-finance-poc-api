@@ -23,4 +23,7 @@ data class AccountCodeLookup(
   @Enumerated(EnumType.STRING)
   @Column(name = "posting_type", nullable = false)
   val postingType: PostingType,
+
+  @Column(name = "parent_account_code")
+  val parentAccountCode: Int? = null,
 )
