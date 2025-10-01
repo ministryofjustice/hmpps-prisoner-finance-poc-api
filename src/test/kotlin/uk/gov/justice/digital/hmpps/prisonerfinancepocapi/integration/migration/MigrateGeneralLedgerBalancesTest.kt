@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.migration
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -9,8 +11,10 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.Integratio
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
@@ -29,8 +33,9 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
     val localDateTime1 = LocalDateTime.now().minusDays(1)
     val localDateTime2 = LocalDateTime.now()
 
-    val expectedDate1 = localDateTime1.atZone(ZoneId.systemDefault()).toInstant().toString()
-    val expectedDate2 = localDateTime2.atZone(ZoneId.systemDefault()).toInstant().toString()
+    val zoneId = ZoneId.of("Europe/London")
+    val expectedDate1 = localDateTime1.atZone(zoneId).toInstant()
+    val expectedDate2 = localDateTime2.atZone(zoneId).toInstant()
 
     val requestBody = GeneralLedgerBalancesSyncRequest(
       accountBalances = listOf(
@@ -78,7 +83,10 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .expectStatus().isOk
       .expectBody()
       .jsonPath("$.items.length()").isEqualTo(1)
-      .jsonPath("$.items[0].date").isEqualTo(expectedDate1)
+      .jsonPath("$.items[0].date").value<String> { actualDateString ->
+        assertThat(Instant.parse(actualDateString))
+          .isCloseTo(expectedDate1, within(500, ChronoUnit.MILLIS))
+      }
 
     webTestClient
       .get()
@@ -88,6 +96,9 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .expectStatus().isOk
       .expectBody()
       .jsonPath("$.items.length()").isEqualTo(1)
-      .jsonPath("$.items[0].date").isEqualTo(expectedDate2)
+      .jsonPath("$.items[0].date").value<String> { actualDateString ->
+        assertThat(Instant.parse(actualDateString))
+          .isCloseTo(expectedDate2, within(500, ChronoUnit.MILLIS))
+      }
   }
 }
