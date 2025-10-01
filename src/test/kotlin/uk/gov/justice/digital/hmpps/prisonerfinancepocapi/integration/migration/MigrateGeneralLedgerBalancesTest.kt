@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.Gener
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 
 class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
@@ -25,10 +26,16 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
     val accountCode2 = 2501 // Canteen Payable (Liability)
     val balance2 = BigDecimal("-500.25")
 
+    val localDateTime1 = LocalDateTime.now().minusDays(1)
+    val localDateTime2 = LocalDateTime.now()
+
+    val expectedDate1 = localDateTime1.atZone(ZoneId.systemDefault()).toInstant().toString()
+    val expectedDate2 = localDateTime2.atZone(ZoneId.systemDefault()).toInstant().toString()
+
     val requestBody = GeneralLedgerBalancesSyncRequest(
       accountBalances = listOf(
-        GeneralLedgerPointInTimeBalance(accountCode = accountCode1, balance = balance1, asOfTimestamp = LocalDateTime.now()),
-        GeneralLedgerPointInTimeBalance(accountCode = accountCode2, balance = balance2, asOfTimestamp = LocalDateTime.now()),
+        GeneralLedgerPointInTimeBalance(accountCode = accountCode1, balance = balance1, asOfTimestamp = localDateTime1),
+        GeneralLedgerPointInTimeBalance(accountCode = accountCode2, balance = balance2, asOfTimestamp = localDateTime2),
       ),
     )
 
@@ -62,5 +69,25 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .jsonPath("$.balance").isEqualTo(balance2.toDouble())
       .jsonPath("$.code").isEqualTo(accountCode2)
       .jsonPath("$.name").isEqualTo("Canteen Payable")
+
+    webTestClient
+      .get()
+      .uri("/prisons/{prisonId}/accounts/{accountCode}/transactions", prisonId, accountCode1)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.items.length()").isEqualTo(1)
+      .jsonPath("$.items[0].date").isEqualTo(expectedDate1)
+
+    webTestClient
+      .get()
+      .uri("/prisons/{prisonId}/accounts/{accountCode}/transactions", prisonId, accountCode2)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.items.length()").isEqualTo(1)
+      .jsonPath("$.items[0].date").isEqualTo(expectedDate2)
   }
 }

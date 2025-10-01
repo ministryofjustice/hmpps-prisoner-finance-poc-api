@@ -30,22 +30,30 @@ open class MigrationService(
     val prison = prisonService.getPrison(prisonId)
       ?: prisonService.createPrison(prisonId)
 
-    val allEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
-    var netBalance = BigDecimal.ZERO
-
-    val transactionTimestamp = timeConversionService.toUtcInstant(request.accountBalances.first().asOfTimestamp)
+    val clearingAccount = accountService.findGeneralLedgerAccount(
+      prisonId = prison.id!!,
+      accountCode = 9999,
+    ) ?: accountService.createGeneralLedgerAccount(
+      prisonId = prison.id,
+      accountCode = 9999,
+    )
 
     request.accountBalances
       .filter { balanceData -> balanceData.accountCode !in prisonerAccountCodes }
       .forEach { balanceData ->
 
+        val transactionTimestamp = timeConversionService.toUtcInstant(balanceData.asOfTimestamp)
+
         val account = accountService.findGeneralLedgerAccount(
-          prisonId = prison.id!!,
+          prisonId = prison.id,
           accountCode = balanceData.accountCode,
         ) ?: accountService.createGeneralLedgerAccount(
           prisonId = prison.id,
           accountCode = balanceData.accountCode,
         )
+
+        val allEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
+        var netBalance = BigDecimal.ZERO
 
         if (balanceData.balance.signum() != 0) {
           val entryType: PostingType
@@ -71,28 +79,21 @@ open class MigrationService(
           }
           allEntries.add(Triple(account.id!!, balanceData.balance.abs(), entryType))
         }
+
+        if (netBalance.signum() != 0) {
+          val balancingEntryType = if (netBalance.signum() > 0) PostingType.CR else PostingType.DR
+          allEntries.add(Triple(clearingAccount.id!!, netBalance.abs(), balancingEntryType))
+        }
+
+        if (allEntries.isNotEmpty()) {
+          transactionService.recordTransaction(
+            transactionType = "OB",
+            description = "General Ledger Point-in-Time Balance Sync",
+            entries = allEntries,
+            transactionTimestamp = transactionTimestamp,
+          )
+        }
       }
-
-    if (netBalance.signum() != 0) {
-      val clearingAccount = accountService.findGeneralLedgerAccount(
-        prisonId = prison.id!!,
-        accountCode = 9999,
-      ) ?: accountService.createGeneralLedgerAccount(
-        prisonId = prison.id,
-        accountCode = 9999,
-      )
-      val balancingEntryType = if (netBalance.signum() > 0) PostingType.CR else PostingType.DR
-      allEntries.add(Triple(clearingAccount.id!!, netBalance.abs(), balancingEntryType))
-    }
-
-    if (allEntries.isNotEmpty()) {
-      transactionService.recordTransaction(
-        transactionType = "OB",
-        description = "General Ledger Point-in-Time Balance Sync",
-        entries = allEntries,
-        transactionTimestamp = transactionTimestamp,
-      )
-    }
   }
 
   @Transactional
