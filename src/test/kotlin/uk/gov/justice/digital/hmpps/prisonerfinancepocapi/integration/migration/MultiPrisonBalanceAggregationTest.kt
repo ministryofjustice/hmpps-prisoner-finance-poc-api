@@ -45,6 +45,7 @@ class MultiPrisonBalanceAggregationTest : IntegrationTestBase() {
           balance = prisonASpendsBalance,
           holdBalance = prisonASpendsHoldBalance,
           asOfTimestamp = migrateTimestamp,
+          transactionId = 1234L,
         ),
         PrisonerAccountPointInTimeBalance(
           prisonId = prisonB,
@@ -52,6 +53,7 @@ class MultiPrisonBalanceAggregationTest : IntegrationTestBase() {
           balance = prisonBSpendsBalance,
           holdBalance = prisonBSpendsHoldBalance,
           asOfTimestamp = migrateTimestamp,
+          transactionId = 1234L,
         ),
         PrisonerAccountPointInTimeBalance(
           prisonId = prisonB,
@@ -59,6 +61,7 @@ class MultiPrisonBalanceAggregationTest : IntegrationTestBase() {
           balance = prisonBSavingsBalance,
           holdBalance = prisonBSavingsHoldBalance,
           asOfTimestamp = migrateTimestamp,
+          transactionId = 1234L,
         ),
       ),
     )

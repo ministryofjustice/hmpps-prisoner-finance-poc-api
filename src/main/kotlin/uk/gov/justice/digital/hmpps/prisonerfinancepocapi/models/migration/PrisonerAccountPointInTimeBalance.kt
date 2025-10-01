@@ -25,6 +25,10 @@ data class PrisonerAccountPointInTimeBalance(
   val holdBalance: BigDecimal,
 
   @field:NotNull
+  @field:Schema(description = "The transaction ID that resulted in the last update to the prisoner balance.")
+  val transactionId: Long?,
+
+  @field:NotNull
   @field:Schema(
     description = "The local date and time from the legacy system when this balance was valid.",
     example = "2025-09-24T10:00:00",
