@@ -3,8 +3,14 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.MigratedGeneralLedgerBalancePayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.MigratedPrisonerBalancePayload
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.NomisSyncPayload
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.MigratedGeneralLedgerBalancePayloadRepository
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.MigratedPrisonerBalancePayloadRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.NomisSyncPayloadRepository
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncRequest
@@ -16,6 +22,8 @@ class RequestCaptureService(
   private val nomisSyncPayloadRepository: NomisSyncPayloadRepository,
   private val objectMapper: ObjectMapper,
   private val timeConversionService: TimeConversionService,
+  private val generalLedgerPayloadRepository: MigratedGeneralLedgerBalancePayloadRepository,
+  private val prisonerBalancePayloadRepository: MigratedPrisonerBalancePayloadRepository,
 ) {
 
   private companion object {
@@ -26,12 +34,7 @@ class RequestCaptureService(
     requestBodyObject: T,
     synchronizedTransactionId: UUID? = null,
   ): NomisSyncPayload {
-    val rawBodyJson = try {
-      objectMapper.writeValueAsString(requestBodyObject)
-    } catch (e: Exception) {
-      log.error("Could not serialize request body to JSON for capture. Type: ${requestBodyObject::class.simpleName}", e)
-      "{}"
-    }
+    val rawBodyJson = safeSerializeRequest(requestBodyObject)
 
     var caseloadId: String? = null
     var requestTypeIdentifier: String?
@@ -65,5 +68,40 @@ class RequestCaptureService(
       transactionTimestamp = transactionInstant,
     )
     return nomisSyncPayloadRepository.save(payload)
+  }
+
+  fun captureGeneralLedgerMigrationRequest(
+    prisonId: String,
+    request: GeneralLedgerBalancesSyncRequest,
+  ): MigratedGeneralLedgerBalancePayload {
+    val rawBodyJson = safeSerializeRequest(request)
+
+    val payload = MigratedGeneralLedgerBalancePayload(
+      prisonId = prisonId,
+      timestamp = Instant.now(),
+      body = rawBodyJson,
+    )
+    return generalLedgerPayloadRepository.save(payload)
+  }
+
+  fun capturePrisonerMigrationRequest(
+    prisonNumber: String,
+    request: PrisonerBalancesSyncRequest,
+  ): MigratedPrisonerBalancePayload {
+    val rawBodyJson = safeSerializeRequest(request)
+
+    val payload = MigratedPrisonerBalancePayload(
+      prisonNumber = prisonNumber,
+      timestamp = Instant.now(),
+      body = rawBodyJson,
+    )
+    return prisonerBalancePayloadRepository.save(payload)
+  }
+
+  private fun safeSerializeRequest(requestBodyObject: Any): String = try {
+    objectMapper.writeValueAsString(requestBodyObject)
+  } catch (e: Exception) {
+    log.error("Could not serialize request body to JSON for capture. Type: ${requestBodyObject::class.simpleName}", e)
+    "{}"
   }
 }
