@@ -31,6 +31,7 @@ open class TransactionService(
     transactionTimestamp: Instant? = null,
     legacyTransactionId: Long? = null,
     synchronizedTransactionId: UUID? = null,
+    prison: String,
   ): Transaction {
     if (entries.isEmpty()) {
       throw IllegalArgumentException("Transaction must have at least one entry.")
@@ -51,6 +52,7 @@ open class TransactionService(
       date = timestamp,
       legacyTransactionId = legacyTransactionId,
       synchronizedTransactionId = synchronizedTransactionId,
+      prison = prison,
     )
     val savedTransaction = transactionRepository.save(transaction)
     val savedEntries = mutableListOf<TransactionEntry>()

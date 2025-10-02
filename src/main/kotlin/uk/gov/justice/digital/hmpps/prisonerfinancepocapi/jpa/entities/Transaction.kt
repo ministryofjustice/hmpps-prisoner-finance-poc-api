@@ -33,4 +33,7 @@ data class Transaction(
 
   @Column(name = "synchronized_transaction_id")
   val synchronizedTransactionId: UUID? = null,
+
+  @Column(name = "prison")
+  val prison: String? = null,
 )

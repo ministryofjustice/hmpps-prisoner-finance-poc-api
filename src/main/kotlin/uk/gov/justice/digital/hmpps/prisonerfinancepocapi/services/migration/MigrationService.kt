@@ -91,6 +91,7 @@ open class MigrationService(
             description = "General Ledger Point-in-Time Balance Sync",
             entries = allEntries,
             transactionTimestamp = transactionTimestamp,
+            prison = prisonId,
           )
         }
       }
@@ -101,9 +102,8 @@ open class MigrationService(
     requestCaptureService.capturePrisonerMigrationRequest(prisonNumber, request)
 
     request.accountBalances.forEach { balanceData ->
-      val prisonCode = balanceData.prisonId
-      val prison = prisonService.getPrison(prisonCode)
-        ?: prisonService.createPrison(prisonCode)
+      val prison = prisonService.getPrison(balanceData.prisonId)
+        ?: prisonService.createPrison(balanceData.prisonId)
       val clearingAccount = accountService.findGeneralLedgerAccount(
         prisonId = prison.id!!,
         accountCode = 9999,
@@ -142,6 +142,7 @@ open class MigrationService(
           description = "Prisoner Balance Migration",
           entries = availableEntries,
           transactionTimestamp = transactionTimestamp,
+          prison = balanceData.prisonId,
         )
       }
 
@@ -155,6 +156,7 @@ open class MigrationService(
           description = "Prisoner Hold Balance Migration",
           entries = holdEntries,
           transactionTimestamp = transactionTimestamp,
+          prison = balanceData.prisonId,
         )
       }
     }
