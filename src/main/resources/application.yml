@@ -27,7 +27,7 @@ spring:
 
   flyway:
     enabled: true
-    locations: classpath:/db/migrations
+    locations: classpath:/db/migrations/common,classpath:/db/migrations/postgres
 
   security:
     oauth2:

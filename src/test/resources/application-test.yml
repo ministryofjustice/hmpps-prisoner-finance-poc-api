@@ -9,6 +9,10 @@ spring:
   jpa:
     show-sql: true
 
+  flyway:
+    enabled: true
+    locations: classpath:/db/migrations/common,classpath:/db/migrations/h2
+
   datasource:
     url: 'jdbc:h2:mem:./nomis_sync;MODE=PostgreSQL'
     username: sa
