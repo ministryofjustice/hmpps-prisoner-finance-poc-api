@@ -55,6 +55,7 @@ open class LedgerSyncService(
         transactionTimestamp = transactionTimestamp,
         legacyTransactionId = request.transactionId,
         synchronizedTransactionId = synchronizedTransactionId,
+        request.caseloadId,
       )
     }
 
@@ -90,6 +91,7 @@ open class LedgerSyncService(
       transactionTimestamp = transactionTimestamp,
       legacyTransactionId = request.transactionId,
       synchronizedTransactionId = synchronizedTransactionId,
+      request.caseloadId,
     )
 
     return synchronizedTransactionId
