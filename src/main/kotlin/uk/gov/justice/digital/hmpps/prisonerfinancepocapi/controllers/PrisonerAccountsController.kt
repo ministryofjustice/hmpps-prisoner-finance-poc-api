@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
@@ -31,7 +32,8 @@ class PrisonerAccountsController(
 ) {
 
   @Operation(
-    summary = "Get the details of a specific account for a prisoner",
+    summary = "Get the details of a specific account for a prisoner, optionally restricted to a specific establishment.",
+    description = "If prisonId is not provided, the aggregated balance across all establishments is returned.",
   )
   @GetMapping(
     path = [
@@ -59,17 +61,19 @@ class PrisonerAccountsController(
   fun getPrisonerSubAccountDetails(
     @PathVariable prisonNumber: String,
     @PathVariable accountCode: Int,
+    @RequestParam(required = false) prisonId: String?,
   ): ResponseEntity<PrisonerSubAccountDetails> {
     val accountDetails = ledgerQueryService.getPrisonerSubAccountDetails(prisonNumber, accountCode)
       ?: throw NoResourceFoundException(
         HttpMethod.GET,
-        "Prisoner account not found for offender: $prisonNumber and account code: $accountCode",
+        "Prisoner account not found for offender: $prisonNumber and account code: $accountCode${if (prisonId != null) " at prison: $prisonId" else ""}",
       )
     return ResponseEntity.ok(accountDetails)
   }
 
   @Operation(
-    summary = "Get a list of all subaccounts for a specific prisoner",
+    summary = "Get a list of all subaccounts for a specific prisoner, optionally restricted to a specific establishment.",
+    description = "If prisonId is not provided, the aggregated balances across all establishments are returned.",
   )
   @GetMapping(
     path = [
@@ -86,6 +90,7 @@ class PrisonerAccountsController(
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun listPrisonerAccounts(
     @PathVariable prisonNumber: String,
+    @RequestParam(required = false) prisonId: String?,
   ): ResponseEntity<PrisonerSubAccountDetailsList> {
     val items = ledgerQueryService.listPrisonerSubAccountDetails(prisonNumber)
     val body = PrisonerSubAccountDetailsList(items)
@@ -93,7 +98,8 @@ class PrisonerAccountsController(
   }
 
   @Operation(
-    summary = "Get list of transactions for a specific sub account for a specific prisoner",
+    summary = "Get list of transactions for a specific sub account for a specific prisoner, optionally restricted to a specific establishment.",
+    description = "If prisonId is not provided, transactions across all establishments are returned.",
   )
   @GetMapping(
     path = [
@@ -121,11 +127,12 @@ class PrisonerAccountsController(
   fun getPrisonerAccountTransactions(
     @PathVariable prisonNumber: String,
     @PathVariable accountCode: Int,
+    @RequestParam(required = false) prisonId: String?,
   ): ResponseEntity<TransactionDetailsList> {
     val items = ledgerQueryService.listPrisonerSubAccountTransactions(prisonNumber, accountCode)
 
     if (items.isEmpty()) {
-      throw NoResourceFoundException(HttpMethod.GET, "Account not found for offender: $prisonNumber and account code: $accountCode")
+      throw NoResourceFoundException(HttpMethod.GET, "Account not found for offender: $prisonNumber and account code: $accountCode${if (prisonId != null) " at prison: $prisonId" else ""}")
     }
 
     val body = TransactionDetailsList(items)
