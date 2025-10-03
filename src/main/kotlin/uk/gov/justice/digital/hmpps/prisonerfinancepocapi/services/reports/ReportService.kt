@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.reports
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionTypeRepository
@@ -15,7 +14,6 @@ import java.time.ZoneOffset
 
 @Service
 class ReportService(
-  private val prisonRepository: PrisonRepository,
   private val accountRepository: AccountRepository,
   private val transactionRepository: TransactionRepository,
   private val transactionEntryRepository: TransactionEntryRepository,
@@ -26,22 +24,18 @@ class ReportService(
     prisonId: String,
     date: LocalDate,
   ): List<SummaryOfPaymentAndReceiptsReport.PostingReportEntry> {
-    // 1. Find the prison and its accounts
-    val prison = prisonRepository.findByCode(prisonId) ?: return emptyList()
-    val prisonAccounts = accountRepository.findByPrisonId(prison.id!!).associateBy { it.id }
-
-    // 2. Define the date range for a single business day
+    // 1. Define the date range for a single business day
     val dateStart = date.atStartOfDay(ZoneOffset.UTC)
     val dateEnd = date.plusDays(1).atStartOfDay(ZoneOffset.UTC)
 
-    // 3. Fetch all transaction entries for the specified date and prison.
-    val dailyTransactionEntries = transactionEntryRepository.findByDateBetweenAndAccountIdIn(
+    // 2. Fetch all transaction entries for the specified date, filtering by transaction.prison code.
+    val dailyTransactionEntries = transactionEntryRepository.findByDateBetweenAndPrisonCode(
       Timestamp.from(dateStart.toInstant()),
       Timestamp.from(dateEnd.toInstant()),
-      prisonAccounts.keys.filterNotNull(),
+      prisonId, // Use the prison CODE for filtering on the transaction table
     )
 
-    // Return an empty list if no transactions occurred on this day
+    // 3. Return an empty list if no transactions occurred on this day
     if (dailyTransactionEntries.isEmpty()) {
       return emptyList()
     }
@@ -49,6 +43,9 @@ class ReportService(
     // 4. Fetch related transactions and transaction types in a single batch.
     val transactionIds = dailyTransactionEntries.map { it.transactionId }.distinct()
     val transactions = transactionRepository.findAllById(transactionIds).associateBy { it.id }
+
+    val accountIds = dailyTransactionEntries.map { it.accountId }.distinct()
+    val prisonAccounts = accountRepository.findAllById(accountIds).associateBy { it.id }
 
     val transactionTypeNames = transactions.values.map { it.transactionType }.distinct()
     val transactionTypes = transactionTypeRepository.findByTxnTypeIn(transactionTypeNames).associateBy { it.txnType }
