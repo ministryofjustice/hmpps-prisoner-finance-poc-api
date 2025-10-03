@@ -7,5 +7,3 @@ interface AccountDetails {
   val name: String
   val balance: BigDecimal
 }
-
-data class AccountDetailsList(val items: List<AccountDetails>)

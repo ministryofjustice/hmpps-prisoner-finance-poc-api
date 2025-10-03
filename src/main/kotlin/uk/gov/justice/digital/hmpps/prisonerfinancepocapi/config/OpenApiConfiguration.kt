@@ -33,8 +33,8 @@ class OpenApiConfiguration(buildProperties: BuildProperties) {
     .tags(apiTags())
 
   private fun serviceServers(): List<Server> = listOf(
-    Server().url("http://localhost:8080").description("Local development environment"),
-    Server().url("https://prisoner-finance-poc-api-dev.hmpps.service.justice.gov.uk/").description("Development environment"),
+    Server().url("https://prisoner-finance-poc-api-dev.hmpps.service.justice.gov.uk/").description("Development"),
+    Server().url("http://localhost:8080").description("Local"),
   )
 
   private fun apiInfo(): Info = Info()

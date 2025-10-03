@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_PRISONER_ACCOUNTS
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.AccountDetailsList
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetails
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetailsList
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetailsList
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.LedgerQueryService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
@@ -79,16 +79,16 @@ class PrisonerAccountsController(
   )
   @ApiResponses(
     value = [
-      ApiResponse(responseCode = "200", description = "OK", content = [Content(schema = Schema(implementation = AccountDetailsList::class))]),
+      ApiResponse(responseCode = "200", description = "OK", content = [Content(schema = Schema(implementation = PrisonerSubAccountDetailsList::class))]),
     ],
   )
   @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
   @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
   fun listPrisonerAccounts(
     @PathVariable prisonNumber: String,
-  ): ResponseEntity<AccountDetailsList> {
+  ): ResponseEntity<PrisonerSubAccountDetailsList> {
     val items = ledgerQueryService.listPrisonerSubAccountDetails(prisonNumber)
-    val body = AccountDetailsList(items)
+    val body = PrisonerSubAccountDetailsList(items)
     return ResponseEntity.ok(body)
   }
 
