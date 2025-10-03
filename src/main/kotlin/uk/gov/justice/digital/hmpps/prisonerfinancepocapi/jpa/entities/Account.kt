@@ -20,8 +20,8 @@ data class Account(
   @Column(name = "uuid", nullable = false)
   val uuid: UUID = UUID.randomUUID(),
 
-  @Column(name = "prison_id", nullable = false)
-  val prisonId: Long,
+  @Column(name = "prison_id", nullable = true)
+  val prisonId: Long?,
 
   @Column(name = "name", nullable = false)
   val name: String,

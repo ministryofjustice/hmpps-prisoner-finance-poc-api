@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionEntry
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
 import java.math.BigDecimal
@@ -14,7 +14,7 @@ import java.time.Instant
 class LedgerBalanceService(
   private val transactionRepository: TransactionRepository,
   private val transactionEntryRepository: TransactionEntryRepository,
-  private val accountRepository: AccountRepository,
+  private val prisonRepository: PrisonRepository,
 ) {
 
   private val prisonerSubAccountCodes = listOf(2101, 2102, 2103)
@@ -107,14 +107,18 @@ class LedgerBalanceService(
 
   /**
    * Handles aggregation for prisoner general ledger accounts (2101, 2102, 2103) by summing the net
-   * balance of all prisoner subaccounts for that prison/code combination.
+   * balance of all transactions for that prison/code combination.
    */
   private fun calculateAggregatedPrisonerGeneralLedgerAccountBalance(account: Account): BigDecimal {
-    val prisonerAccounts = accountRepository.findByPrisonIdAndAccountCode(account.prisonId, account.accountCode)
-    return prisonerAccounts.sumOf { prisonerAccount ->
-      val (totalBalance, _) = calculatePrisonerAccountBalances(prisonerAccount)
-      totalBalance
-    }
+    val targetAccountCode = account.accountCode
+    val prison = prisonRepository.findById(account.prisonId!!).orElse(null)?.code
+
+    val aggregatedBalance = transactionEntryRepository.calculateAggregatedBalance(
+      accountCode = targetAccountCode,
+      prison = prison!!,
+    )
+
+    return aggregatedBalance ?: BigDecimal.ZERO
   }
 
   /**
