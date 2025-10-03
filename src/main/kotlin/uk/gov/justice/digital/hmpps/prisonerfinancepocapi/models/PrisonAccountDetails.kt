@@ -3,7 +3,7 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 
-@Schema(description = "Summary of an prison general ledger account")
+@Schema(description = "Summary of a prison general ledger account")
 data class PrisonAccountDetails(
   @field:Schema(description = "The unique numeric code identifying the prison general ledger account.", example = "1000")
   override val code: Int,
