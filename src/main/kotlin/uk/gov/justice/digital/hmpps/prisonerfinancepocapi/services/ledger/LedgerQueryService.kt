@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.Priso
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonAccountDetails
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerEstablishmentBalanceDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
@@ -167,6 +168,30 @@ open class LedgerQueryService(
       return emptyList()
     }
     return listOf(transactionDetailsMapper.mapToTransactionDetails(transaction, transactionEntries))
+  }
+
+  fun listPrisonerBalancesByEstablishment(prisonNumber: String): List<PrisonerEstablishmentBalanceDetails> {
+    val prisonerAccounts = accountRepository.findByPrisonNumber(prisonNumber)
+
+    if (prisonerAccounts.isEmpty()) {
+      return emptyList()
+    }
+
+    val allEstablishmentBalances = mutableListOf<PrisonerEstablishmentBalanceDetails>()
+
+    prisonerAccounts.forEach { account ->
+      val establishmentBalances = ledgerBalanceService.calculatePrisonerBalancesByEstablishment(account)
+
+      establishmentBalances.mapTo(allEstablishmentBalances) { balance ->
+        PrisonerEstablishmentBalanceDetails(
+          prisonId = balance.prisonId,
+          accountCode = account.accountCode,
+          totalBalance = balance.totalBalance,
+          holdBalance = balance.holdBalance,
+        )
+      }
+    }
+    return allEstablishmentBalances.toList()
   }
 
   private fun findPrisonAccount(prisonId: String, accountCode: Int): Account? {

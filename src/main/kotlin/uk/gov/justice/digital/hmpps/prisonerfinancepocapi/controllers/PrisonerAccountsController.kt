@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_PRISONER_ACCOUNTS
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerEstablishmentBalanceDetailsList
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetailsList
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetailsList
@@ -173,6 +174,30 @@ class PrisonerAccountsController(
     }
 
     val body = TransactionDetailsList(items)
+    return ResponseEntity.ok(body)
+  }
+
+  @Operation(
+    summary = "Get a list of all subaccount balances for a prisoner, grouped by establishment where transactions occurred",
+  )
+  @GetMapping(
+    path = [
+      "/prisoners/{prisonNumber}/accounts/balances-by-establishment",
+    ],
+    produces = [MediaType.APPLICATION_JSON_VALUE],
+  )
+  @ApiResponses(
+    value = [
+      ApiResponse(responseCode = "200", description = "OK", content = [Content(schema = Schema(implementation = PrisonerEstablishmentBalanceDetailsList::class))]),
+    ],
+  )
+  @SecurityRequirement(name = "bearer-jwt", scopes = [ROLE_PRISONER_FINANCE_SYNC])
+  @PreAuthorize("hasAnyAuthority('$ROLE_PRISONER_FINANCE_SYNC')")
+  fun listPrisonerBalancesByEstablishment(
+    @PathVariable prisonNumber: String,
+  ): ResponseEntity<PrisonerEstablishmentBalanceDetailsList> {
+    val items = ledgerQueryService.listPrisonerBalancesByEstablishment(prisonNumber)
+    val body = PrisonerEstablishmentBalanceDetailsList(items)
     return ResponseEntity.ok(body)
   }
 }
