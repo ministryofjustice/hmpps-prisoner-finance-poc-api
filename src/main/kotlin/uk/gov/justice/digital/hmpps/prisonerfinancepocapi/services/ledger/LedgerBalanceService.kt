@@ -8,24 +8,23 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Transacti
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.EstablishmentBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerEstablishmentBalance
 import java.math.BigDecimal
-import java.time.Instant
 
 @Service
 class LedgerBalanceService(
   private val transactionRepository: TransactionRepository,
   private val transactionEntryRepository: TransactionEntryRepository,
   private val prisonRepository: PrisonRepository,
+  private val migrationFilterService: MigrationFilterService,
 ) {
 
   private val prisonerSubAccountCodes = listOf(2101, 2102, 2103)
-  private val holdTransactionTypes = listOf("HOA", "HOR", "OHB")
-  private val migrationTypes = listOf("OB", "OHB")
+  private val holdTransactionTypes = setOf("HOA", "HOR", "OHB")
 
   /**
-   * Calculates both the total balance and hold balances for a prisoner account
-   * by aggregating the per-establishment balances.
+   * Calculates the total and hold balances for a prisoner's account by aggregating
+   * per-establishment balances.
    */
   fun calculatePrisonerAccountBalances(account: Account): Pair<BigDecimal, BigDecimal> {
     val establishmentBalances = calculatePrisonerBalancesByEstablishment(account)
@@ -40,130 +39,50 @@ class LedgerBalanceService(
     return Pair(aggregatedTotalBalance, aggregatedHoldBalance)
   }
 
+  /**
+   * Calculates the balance for a General Ledger account.
+   * Uses aggregated data for prisoner sub-accounts, otherwise calculates from transaction entries.
+   */
   fun calculateGeneralLedgerAccountBalance(account: Account): BigDecimal {
     if (account.accountCode in prisonerSubAccountCodes) {
       return calculateAggregatedPrisonerGeneralLedgerAccountBalance(account)
     }
 
-    val transactionEntries = getTransactionsSinceLatestBalance(account.id!!)
+    val (transactionEntries, allTransactions) = retrieveAccountTransactionData(account.id!!)
 
-    if (transactionEntries.isEmpty()) {
+    val entriesSinceMigration = migrationFilterService.getPostMigrationTransactionEntries(account.id, transactionEntries, allTransactions)
+
+    if (entriesSinceMigration.isEmpty()) {
       return BigDecimal.ZERO
     }
 
-    return transactionEntries.sumOf { entry ->
-      when (entry.entryType) {
-        PostingType.DR -> if (account.postingType == PostingType.DR) entry.amount else entry.amount.negate()
-        PostingType.CR -> if (account.postingType == PostingType.CR) entry.amount else entry.amount.negate()
-      }
+    return entriesSinceMigration.sumOf { entry ->
+      val isNaturalPosting = (entry.entryType == account.postingType)
+      if (isNaturalPosting) entry.amount else entry.amount.negate()
     }
   }
 
   /**
-   * Retrieves transaction entries for an account, filtered to exclude transactions
-   * that occurred before the latest 'OB' or 'OHB' transaction
+   * Calculates the total and hold balances for a prisoner's account, broken down by establishment.
    */
-  fun getTransactionsSinceLatestBalance(accountId: Long): List<TransactionEntry> {
-    val latestMigrationTimestamp = findCutOffTimestamp(accountId)
-    val allEntries = transactionEntryRepository.findByAccountId(accountId)
+  fun calculatePrisonerBalancesByEstablishment(account: Account): List<PrisonerEstablishmentBalance> {
+    val (transactionEntries, allTransactions) = retrieveAccountTransactionData(account.id!!)
+    if (transactionEntries.isEmpty()) return emptyList()
 
-    if (latestMigrationTimestamp == null) {
-      return allEntries
-    }
+    val entriesByPrison = groupTransactionEntriesByPrison(transactionEntries, allTransactions)
+    val results = mutableListOf<PrisonerEstablishmentBalance>()
 
-    return allEntries.filter { entry ->
-      val transaction = transactionRepository.findById(entry.transactionId).orElse(null) ?: return@filter false
-
-      val transactionInstant = transaction.date.toInstant()
-
-      val isMigrationTransaction = transactionInstant.equals(latestMigrationTimestamp) &&
-        (transaction.transactionType in migrationTypes)
-
-      val isPostMigration = transactionInstant.isAfter(latestMigrationTimestamp)
-
-      isMigrationTransaction || isPostMigration
-    }
-  }
-
-  /**
-   * Finds the timestamp of the latest Opening Balance ('OB') or Hold Opening Balance ('OHB') transaction
-   * for a given account.
-   */
-  private fun findCutOffTimestamp(accountId: Long): Instant? {
-    val transactionIds = transactionEntryRepository.findByAccountId(accountId)
-      .map { it.transactionId }
-      .distinct()
-
-    return transactionRepository.findAllById(transactionIds)
-      .filter { it.transactionType in migrationTypes }
-      .maxOfOrNull { it.date.toInstant() }
-  }
-
-  /**
-   * Handles aggregation for prisoner general ledger accounts (2101, 2102, 2103) by summing the net
-   * balance of all transactions for that prison/code combination.
-   */
-  private fun calculateAggregatedPrisonerGeneralLedgerAccountBalance(account: Account): BigDecimal {
-    val targetAccountCode = account.accountCode
-    val prison = prisonRepository.findById(account.prisonId!!).orElse(null)?.code
-
-    val aggregatedBalance = transactionEntryRepository.calculateAggregatedBalance(
-      accountCode = targetAccountCode,
-      prison = prison!!,
-    )
-
-    return aggregatedBalance ?: BigDecimal.ZERO
-  }
-
-  /**
-   * Calculates the total and hold balances for a prisoner's account, broken down by establishment
-   * where transactions have occurred.
-   */
-  fun calculatePrisonerBalancesByEstablishment(account: Account): List<EstablishmentBalance> {
-    val allEntries = transactionEntryRepository.findByAccountId(account.id!!)
-    if (allEntries.isEmpty()) {
-      return emptyList()
-    }
-
-    val transactionIds = allEntries.map { it.transactionId }.distinct()
-    val allTransactions = transactionRepository.findAllById(transactionIds).associateBy { it.id!! }
-
-    val entriesByPrison: Map<String, List<TransactionEntry>> = allEntries
-      .mapNotNull { entry ->
-        val transaction = allTransactions[entry.transactionId]
-        if (transaction?.prison != null) {
-          entry to transaction.prison
-        } else {
-          null
-        }
-      }
-      .groupBy { it.second }
-      .mapValues { it.value.map { (entry, _) -> entry } }
-
-    val results = mutableListOf<EstablishmentBalance>()
-
-    for ((prisonId, entries) in entriesByPrison) {
-      val latestMigrationTimestamp = findLatestMigrationTimestampForPrison(account.id, prisonId, allTransactions)
-
-      val postMigrationEntries = entries.filter { entry ->
-        val transaction = allTransactions[entry.transactionId] ?: return@filter false
-        val transactionInstant = transaction.date.toInstant()
-
-        if (latestMigrationTimestamp == null) {
-          true
-        } else {
-          val isMigrationTransaction = transactionInstant.equals(latestMigrationTimestamp) &&
-            (transaction.transactionType in migrationTypes)
-
-          val isPostMigration = transactionInstant.isAfter(latestMigrationTimestamp)
-
-          isMigrationTransaction || isPostMigration
-        }
-      }
+    for ((prisonCode, entries) in entriesByPrison) {
+      val postMigrationEntries = migrationFilterService.getPostMigrationTransactionEntriesForPrison(
+        accountId = account.id,
+        prisonCode = prisonCode,
+        allEntries = entries,
+        allTransactions = allTransactions,
+      )
 
       if (postMigrationEntries.isNotEmpty()) {
         val (totalBalance, holdBalance) = calculateBalances(postMigrationEntries, allTransactions)
-        results.add(EstablishmentBalance(prisonId, totalBalance, holdBalance))
+        results.add(PrisonerEstablishmentBalance(prisonCode, totalBalance, holdBalance))
       }
     }
 
@@ -171,26 +90,53 @@ class LedgerBalanceService(
   }
 
   /**
-   * Finds the timestamp of the latest Opening Balance ('OB') or Hold Opening Balance ('OHB') transaction
-   * for a given account AND prison.
+   * Handles aggregation for prisoner general ledger accounts (2101, 2102, 2103) by delegating
+   * to a repository method that sums the net balance for that prison/code combination.
    */
-  private fun findLatestMigrationTimestampForPrison(accountId: Long, prisonCode: String, allTransactions: Map<Long, Transaction>): Instant? {
-    val transactionIds = transactionEntryRepository.findByAccountId(accountId).map { it.transactionId }.distinct()
+  private fun calculateAggregatedPrisonerGeneralLedgerAccountBalance(account: Account): BigDecimal {
+    val targetAccountCode = account.accountCode
+    val prisonCode = prisonRepository.findById(account.prisonId!!).orElse(null)?.code
+      ?: throw IllegalStateException("Prison not found for ID: ${account.prisonId}")
 
-    return allTransactions
-      .filterKeys { it in transactionIds }
-      .values
-      .filter { it.transactionType in migrationTypes && it.prison == prisonCode }
-      .maxOfOrNull { it.date.toInstant() }
+    return transactionEntryRepository.calculateAggregatedBalance(
+      accountCode = targetAccountCode,
+      prison = prisonCode,
+    ) ?: BigDecimal.ZERO
   }
 
   /**
-   * Contains the core logic for calculating total and hold balances
+   * Retrieves all transaction entries and their corresponding transactions for a given account ID.
    */
-  private fun calculateBalances(transactionEntries: List<TransactionEntry>, allTransactions: Map<Long, Transaction>): Pair<BigDecimal, BigDecimal> {
-    // Exclude OHB as it represents an opening balance for holds, not net cash movement.
-    val nonHoldEntries = transactionEntries.filter { entry ->
-      allTransactions[entry.transactionId]?.transactionType != "OHB"
+  private fun retrieveAccountTransactionData(accountId: Long): Pair<List<TransactionEntry>, Map<Long, Transaction>> {
+    val transactionEntries = transactionEntryRepository.findByAccountId(accountId)
+    val transactionIds = transactionEntries.map { it.transactionId }.distinct()
+    val allTransactions = transactionRepository.findAllById(transactionIds).associateBy { it.id!! }
+    return Pair(transactionEntries, allTransactions)
+  }
+
+  /**
+   * Groups transaction entries by the prison code of their associated transaction.
+   */
+  private fun groupTransactionEntriesByPrison(
+    transactionEntries: List<TransactionEntry>,
+    allTransactions: Map<Long, Transaction>,
+  ): Map<String, List<TransactionEntry>> = transactionEntries
+    .mapNotNull { entry ->
+      val prisonCode = allTransactions[entry.transactionId]?.prison
+      if (prisonCode != null) entry to prisonCode else null
+    }
+    .groupBy { it.second }
+    .mapValues { (_, pairs) -> pairs.map { it.first } }
+
+  /**
+   * Contains the core logic for calculating total and hold balances from a list of entries.
+   */
+  private fun calculateBalances(
+    transactionEntries: List<TransactionEntry>,
+    allTransactions: Map<Long, Transaction>,
+  ): Pair<BigDecimal, BigDecimal> {
+    val nonHoldEntries = transactionEntries.filter {
+      allTransactions[it.transactionId]?.transactionType != "OHB"
     }
 
     val totalBalance = nonHoldEntries.sumOf { entry ->

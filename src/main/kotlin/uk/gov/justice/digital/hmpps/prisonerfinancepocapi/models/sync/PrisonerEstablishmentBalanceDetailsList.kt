@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models
+package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync
 
 import io.swagger.v3.oas.annotations.media.Schema
 

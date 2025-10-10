@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.Accoun
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.PrisonService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.TransactionService
 import java.math.BigDecimal
+import java.time.Instant
 
 @Service
 open class MigrationService(
@@ -22,8 +23,10 @@ open class MigrationService(
 ) {
 
   @Transactional
-  open fun migrateGeneralLedgerBalances(prisonId: String, request: GeneralLedgerBalancesSyncRequest) {
+  fun migrateGeneralLedgerBalances(prisonId: String, request: GeneralLedgerBalancesSyncRequest) {
     requestCaptureService.captureGeneralLedgerMigrationRequest(prisonId, request)
+
+    val migrationBatchTime = Instant.now()
 
     val prisonerAccountCodes = listOf(2101, 2102, 2103)
 
@@ -92,14 +95,17 @@ open class MigrationService(
             entries = allEntries,
             transactionTimestamp = transactionTimestamp,
             prison = prisonId,
+            createdAt = migrationBatchTime,
           )
         }
       }
   }
 
   @Transactional
-  open fun migratePrisonerBalances(prisonNumber: String, request: PrisonerBalancesSyncRequest) {
+  fun migratePrisonerBalances(prisonNumber: String, request: PrisonerBalancesSyncRequest) {
     requestCaptureService.capturePrisonerMigrationRequest(prisonNumber, request)
+
+    val migrationBatchTime = Instant.now()
 
     request.accountBalances.forEach { balanceData ->
       val prison = prisonService.getPrison(balanceData.prisonId)
@@ -143,6 +149,8 @@ open class MigrationService(
           entries = availableEntries,
           transactionTimestamp = transactionTimestamp,
           prison = balanceData.prisonId,
+          legacyTransactionId = balanceData.transactionId,
+          createdAt = migrationBatchTime,
         )
       }
 
@@ -157,6 +165,8 @@ open class MigrationService(
           entries = holdEntries,
           transactionTimestamp = transactionTimestamp,
           prison = balanceData.prisonId,
+          legacyTransactionId = balanceData.transactionId,
+          createdAt = migrationBatchTime,
         )
       }
     }
