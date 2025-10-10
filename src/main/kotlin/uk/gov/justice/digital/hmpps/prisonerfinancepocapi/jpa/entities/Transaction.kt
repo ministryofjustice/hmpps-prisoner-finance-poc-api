@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -36,4 +37,7 @@ data class Transaction(
 
   @Column(name = "prison")
   val prison: String? = null,
+
+  @Column(name = "created_at")
+  val createdAt: Instant? = null,
 )

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.controllers.migration
+package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.controllers.sync
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -17,13 +17,13 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_FINANCE_SYNC
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_MIGRATION
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.TAG_NOMIS_SYNC
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.migration.MigrationService
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
-@Tag(name = TAG_NOMIS_MIGRATION)
+@Tag(name = TAG_NOMIS_SYNC)
 @RestController
 class MigrationController(@param:Autowired private val migrationService: MigrationService) {
 

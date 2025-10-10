@@ -13,65 +13,41 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTr
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.random.Random
 
-class PerEstablishmentBalanceTest : IntegrationTestBase() {
+class DuplicateMigrationTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var objectMapper: ObjectMapper
 
-  private val spendsAccountCode = 2102
-  private val savingsAccountCode = 2103
-  private val migrateTimestamp = LocalDateTime.of(2025, 10, 1, 12, 0, 0)
-
+  private val privateCashAccountCode = 2101
   private val holdsGlAccountCode = 2199
 
   @Test
-  fun `should correctly calculate balances per establishment after migration and subsequent transactions`() {
+  fun `should NOT double count when same migration request is sent twice and correctly reflect subsequent HOA`() {
+    val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
 
-    val prisonA = UUID.randomUUID().toString().substring(0, 3).uppercase()
-    val prisonB = UUID.randomUUID().toString().substring(0, 3).uppercase()
-
-    val earningsAccountCode = 1501
-    val canteenPayable = 2501
-
-    val initialSpendsA = BigDecimal("10.00")
-    val initialHoldA = BigDecimal("5.00")
-    val initialSpendsB = BigDecimal("20.00")
-    val initialHoldB = BigDecimal("0.00")
-    val initialSavingsA = BigDecimal("50.00")
+    val migrationTimestamp = LocalDateTime.now().minus(7, ChronoUnit.DAYS)
+    val initialBalanceAmount = BigDecimal("100.00")
+    val postMigrationHoldAmount = BigDecimal("15.00")
 
     val prisonerMigrationRequestBody = PrisonerBalancesSyncRequest(
       accountBalances = listOf(
         PrisonerAccountPointInTimeBalance(
-          prisonId = prisonA,
-          accountCode = spendsAccountCode,
-          balance = initialSpendsA,
-          holdBalance = initialHoldA,
-          asOfTimestamp = migrateTimestamp,
-          transactionId = 1000L,
-        ),
-        PrisonerAccountPointInTimeBalance(
-          prisonId = prisonB,
-          accountCode = spendsAccountCode,
-          balance = initialSpendsB,
-          holdBalance = initialHoldB,
-          asOfTimestamp = migrateTimestamp,
-          transactionId = 1001L,
-        ),
-        PrisonerAccountPointInTimeBalance(
-          prisonId = prisonA,
-          accountCode = savingsAccountCode,
-          balance = initialSavingsA,
+          prisonId = prisonId,
+          accountCode = privateCashAccountCode,
+          balance = initialBalanceAmount,
           holdBalance = BigDecimal.ZERO,
-          asOfTimestamp = migrateTimestamp,
-          transactionId = 1002L,
+          asOfTimestamp = migrationTimestamp,
+          transactionId = 9000L,
         ),
       ),
     )
 
+    // Initial Migration (Superseded)
     webTestClient
       .post()
       .uri("/migrate/prisoner-balances/{prisonNumber}", prisonNumber)
@@ -81,75 +57,46 @@ class PerEstablishmentBalanceTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    val postMigrationTimestamp = migrateTimestamp.plusHours(1)
+    // Run Duplicate Migration (Latest)
+    webTestClient
+      .post()
+      .uri("/migrate/prisoner-balances/{prisonNumber}", prisonNumber)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .contentType(MediaType.APPLICATION_JSON)
+      .bodyValue(objectMapper.writeValueAsString(prisonerMigrationRequestBody))
+      .exchange()
+      .expectStatus().isOk
 
-    val creditAAmount = BigDecimal("10.00")
-    val transactionRequestA = createSyncRequest(
-      caseloadId = prisonA,
+    // Post-Migration Activity (HOA: Moves 15.00 from Available to Hold)
+    val postMigrationTimestamp = migrationTimestamp.plusDays(1)
+    val transactionRequest = createSyncRequest(
+      caseloadId = prisonId,
       timestamp = postMigrationTimestamp,
       offenderDisplayId = prisonNumber,
-      offenderAccountCode = spendsAccountCode,
-      offenderSubAccountType = "SPND",
-      offenderPostingType = "CR",
-      amount = creditAAmount,
-      transactionType = "A_EARN",
-      glCode = earningsAccountCode,
-      glPostingType = "DR",
-    )
-    postSyncTransaction(transactionRequestA)
-
-    val debitBAmount = BigDecimal("5.00")
-    val transactionRequestB = createSyncRequest(
-      caseloadId = prisonB,
-      timestamp = postMigrationTimestamp.plusMinutes(1),
-      offenderDisplayId = prisonNumber,
-      offenderAccountCode = spendsAccountCode,
-      offenderSubAccountType = "SPND",
+      offenderAccountCode = privateCashAccountCode,
+      offenderSubAccountType = "REG",
       offenderPostingType = "DR",
-      amount = debitBAmount,
-      transactionType = "CANT",
-      glCode = canteenPayable,
-      glPostingType = "CR",
-    )
-    postSyncTransaction(transactionRequestB)
-
-    val holdAAmount = BigDecimal("2.00")
-    val transactionRequestHoldA = createSyncRequest(
-      caseloadId = prisonA,
-      timestamp = postMigrationTimestamp.plusMinutes(2),
-      offenderDisplayId = prisonNumber,
-      offenderAccountCode = savingsAccountCode,
-      offenderSubAccountType = "SAV",
-      offenderPostingType = "DR",
-      amount = holdAAmount,
+      amount = postMigrationHoldAmount,
       transactionType = "HOA",
       glCode = holdsGlAccountCode,
       glPostingType = "CR",
     )
-    postSyncTransaction(transactionRequestHoldA)
+    postSyncTransaction(transactionRequest)
 
-    val expectedSpendsABalance = initialSpendsA.add(creditAAmount)
-    val expectedSpendsAHold = initialHoldA
-
-    val expectedSpendsBBalance = initialSpendsB.subtract(debitBAmount)
-
-    val expectedSavingsABalance = initialSavingsA.subtract(holdAAmount)
-    val expectedSavingsAHold = BigDecimal.ZERO.add(holdAAmount)
+    // Expected Balance = Latest Migration (100.00) - HOA (15.00) = 85.00
+    // Expected Hold Balance = Initial Hold (0.00) + HOA (15.00) = 15.00
+    val expectedFinalBalance = initialBalanceAmount.subtract(postMigrationHoldAmount)
+    val expectedFinalHoldBalance = postMigrationHoldAmount
 
     webTestClient
       .get()
-      .uri("/prisoners/{prisonNumber}/accounts/balances-by-establishment", prisonNumber)
+      .uri("/prisoners/{prisonNumber}/accounts/{accountCode}", prisonNumber, privateCashAccountCode)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.items.length()").isEqualTo(3)
-      .jsonPath("$.items[?(@.prisonId == '$prisonA' && @.accountCode == $spendsAccountCode)].totalBalance").isEqualTo(expectedSpendsABalance.toDouble())
-      .jsonPath("$.items[?(@.prisonId == '$prisonA' && @.accountCode == $spendsAccountCode)].holdBalance").isEqualTo(expectedSpendsAHold.toDouble())
-      .jsonPath("$.items[?(@.prisonId == '$prisonB' && @.accountCode == $spendsAccountCode)].totalBalance").isEqualTo(expectedSpendsBBalance.toDouble())
-      .jsonPath("$.items[?(@.prisonId == '$prisonB' && @.accountCode == $spendsAccountCode)].holdBalance").isEqualTo(0)
-      .jsonPath("$.items[?(@.prisonId == '$prisonA' && @.accountCode == $savingsAccountCode)].totalBalance").isEqualTo(expectedSavingsABalance.toDouble())
-      .jsonPath("$.items[?(@.prisonId == '$prisonA' && @.accountCode == $savingsAccountCode)].holdBalance").isEqualTo(expectedSavingsAHold.toDouble())
+      .jsonPath("$.balance").isEqualTo(expectedFinalBalance.toDouble())
+      .jsonPath("$.holdBalance").isEqualTo(expectedFinalHoldBalance.toDouble())
   }
 
   private fun postSyncTransaction(syncRequest: SyncOffenderTransactionRequest) {
