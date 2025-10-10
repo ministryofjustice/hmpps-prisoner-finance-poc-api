@@ -22,7 +22,7 @@ class PrisonerGeneralLedgerAccountsAggregationTest : IntegrationTestBase() {
   private fun generateRandomCode(length: Int): String = UUID.randomUUID().toString().substring(0, length).uppercase()
 
   @Test
-  fun `should_sum_transactions_from_multiple_prisoners_in_a_single_general_ledger_account`() {
+  fun `should sum transactions from multiple prisoners in a single general ledger account`() {
     val prisonId = generateRandomCode(3)
     val offender1DisplayId = generateRandomCode(7)
     val offender2DisplayId = generateRandomCode(7)

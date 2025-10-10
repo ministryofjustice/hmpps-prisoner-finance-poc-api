@@ -11,6 +11,8 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.Trans
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerSubAccountDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetails
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerBalanceDetails
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.PrisonerEstablishmentBalanceDetails
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
 import java.sql.Timestamp
 import java.time.LocalDate
@@ -167,6 +169,42 @@ open class LedgerQueryService(
       return emptyList()
     }
     return listOf(transactionDetailsMapper.mapToTransactionDetails(transaction, transactionEntries))
+  }
+
+  fun listPrisonerBalancesByEstablishment(prisonNumber: String): List<PrisonerEstablishmentBalanceDetails> {
+    val prisonerAccounts = accountRepository.findByPrisonNumber(prisonNumber)
+
+    if (prisonerAccounts.isEmpty()) {
+      return emptyList()
+    }
+
+    val allEstablishmentBalances = mutableListOf<PrisonerEstablishmentBalanceDetails>()
+
+    prisonerAccounts.forEach { account ->
+      val prisonerEstablishmentBalances = ledgerBalanceService.calculatePrisonerBalancesByEstablishment(account)
+
+      prisonerEstablishmentBalances.mapTo(allEstablishmentBalances) { balance ->
+        PrisonerEstablishmentBalanceDetails(
+          prisonId = balance.prisonId,
+          accountCode = account.accountCode,
+          totalBalance = balance.totalBalance,
+          holdBalance = balance.holdBalance,
+        )
+      }
+    }
+    return allEstablishmentBalances.toList()
+  }
+
+  fun listGeneralLedgerBalances(prisonId: String): List<GeneralLedgerBalanceDetails> {
+    val prison = prisonRepository.findByCode(prisonId) ?: return emptyList()
+    val accounts = accountRepository.findByPrisonId(prison.id!!)
+
+    return accounts.filter { it.accountType == AccountType.GENERAL_LEDGER }.map { account ->
+      GeneralLedgerBalanceDetails(
+        accountCode = account.accountCode,
+        balance = ledgerBalanceService.calculateGeneralLedgerAccountBalance(account),
+      )
+    }
   }
 
   private fun findPrisonAccount(prisonId: String, accountCode: Int): Account? {

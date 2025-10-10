@@ -22,7 +22,7 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
   private lateinit var objectMapper: ObjectMapper
 
   @Test
-  fun `should_migrate_initial_balance_then_sync_offender_transaction_and_verify_balances`() {
+  fun `should migrate initial balance then sync offender transaction and verify balances`() {
     val migrateTimestamp = LocalDateTime.of(2025, 6, 1, 0, 0, 0) // Migration occurs first
     val transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17) // Transaction occurs later
 

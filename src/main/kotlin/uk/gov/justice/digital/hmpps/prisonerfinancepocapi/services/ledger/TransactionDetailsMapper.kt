@@ -5,13 +5,11 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Transacti
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountCodeLookupRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.TransactionDetails
 
 @Component
 class TransactionDetailsMapper(
   private val accountRepository: AccountRepository,
-  private val prisonRepository: PrisonRepository,
   private val accountCodeLookupRepository: AccountCodeLookupRepository,
 ) {
 
@@ -28,7 +26,7 @@ class TransactionDetailsMapper(
           name = it.name,
           transactionType = transaction.transactionType,
           transactionDescription = transaction.description,
-          prison = prisonRepository.findById(it.prisonId).orElse(null)?.code,
+          prison = transaction.prison,
           prisoner = it.prisonNumber,
           classification = accountCodeLookup?.classification ?: "Unknown",
           postingType = entry.entryType,

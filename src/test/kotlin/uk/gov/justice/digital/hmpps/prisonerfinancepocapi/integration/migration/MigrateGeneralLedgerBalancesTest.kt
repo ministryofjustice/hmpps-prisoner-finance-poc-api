@@ -101,4 +101,50 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
           .isCloseTo(expectedDate2, within(500, ChronoUnit.MILLIS))
       }
   }
+
+  @Test
+  fun `should retrieve gl balances after migration via reconcile endpoint`() {
+    val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
+
+    val accountBalances = listOf(
+      GeneralLedgerPointInTimeBalance(accountCode = 1000, balance = BigDecimal("0.00"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.877")),
+      GeneralLedgerPointInTimeBalance(accountCode = 1505, balance = BigDecimal("10587.23"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.937")),
+      GeneralLedgerPointInTimeBalance(accountCode = 2505, balance = BigDecimal("1554565.40"), asOfTimestamp = LocalDateTime.parse("2025-03-28T02:49:19.852")),
+      GeneralLedgerPointInTimeBalance(accountCode = 1103, balance = BigDecimal("-906347.40"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.900")),
+      GeneralLedgerPointInTimeBalance(accountCode = 2503, balance = BigDecimal("1034.63"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.992")),
+      GeneralLedgerPointInTimeBalance(accountCode = 2100, balance = BigDecimal("0.00"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.955")),
+      GeneralLedgerPointInTimeBalance(accountCode = 1500, balance = BigDecimal("0.00"), asOfTimestamp = LocalDateTime.parse("2025-03-01T02:31:37.913")),
+    )
+    val requestBody = GeneralLedgerBalancesSyncRequest(accountBalances = accountBalances)
+
+    webTestClient
+      .post()
+      .uri("/migrate/general-ledger-balances/{prisonId}", prisonId)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .contentType(MediaType.APPLICATION_JSON)
+      .bodyValue(objectMapper.writeValueAsString(requestBody))
+      .exchange()
+      .expectStatus().isOk
+
+    webTestClient
+      .get()
+      .uri("/reconcile/general-ledger-balances/{prisonId}", prisonId)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.items[?(@.accountCode == 1505)].balance").value<List<Double>> { balances ->
+        assertThat(balances).containsExactly(BigDecimal("10587.23").toDouble())
+      }
+      .jsonPath("$.items[?(@.accountCode == 2505)].balance").value<List<Double>> { balances ->
+        assertThat(balances).containsExactly(BigDecimal("1554565.40").toDouble())
+      }
+      .jsonPath("$.items[?(@.accountCode == 1103)].balance").value<List<Double>> { balances ->
+        assertThat(balances).containsExactly(BigDecimal("-906347.40").toDouble())
+      }
+      .jsonPath("$.items[?(@.accountCode == 2100)].balance").value<List<Double>> { balances ->
+        assertThat(balances.size).isEqualTo(1)
+        assertThat(balances[0]).isCloseTo(0.0, within(0.0001))
+      }
+  }
 }

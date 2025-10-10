@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 const val TAG_NOMIS_SYNC = "NOMIS Sync"
-const val TAG_NOMIS_MIGRATION = "NOMIS Migration"
 const val TAG_PRISONER_ACCOUNTS = "Prisoner trust accounts"
 const val TAG_PRISON_ACCOUNTS = "Prison accounts"
 const val TAG_PRISON_REPORTS = "Prison reports"

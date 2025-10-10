@@ -25,7 +25,7 @@ open class AccountService(
     return if (subAccountType != null) {
       accountRepository.findByPrisonNumberAndSubAccountType(prisonNumber, subAccountType)
         ?: createAccount(
-          prisonId = prisonId,
+          prisonId = null,
           name = "$prisonNumber - $subAccountType",
           accountType = AccountType.PRISONER,
           prisonNumber = prisonNumber,
@@ -61,7 +61,7 @@ open class AccountService(
 
   @Transactional
   open fun createAccount(
-    prisonId: Long,
+    prisonId: Long?,
     name: String,
     accountType: AccountType,
     accountCode: Int,
