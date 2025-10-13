@@ -20,7 +20,9 @@ class LedgerBalanceService(
 ) {
 
   private val prisonerSubAccountCodes = listOf(2101, 2102, 2103)
-  private val holdTransactionTypes = setOf("HOA", "HOR", "OHB")
+  private val holdCreditTransactionTypes = setOf("HOA", "WHF", "OHB")
+  private val holdDebitTransactionTypes = setOf("HOR", "WFR")
+  private val holdTransactionTypes = holdCreditTransactionTypes + holdDebitTransactionTypes
 
   /**
    * Calculates the total and hold balances for a prisoner's account by aggregating
@@ -152,8 +154,8 @@ class LedgerBalanceService(
 
     val holdBalance = holdEntries.sumOf { entry ->
       when (allTransactions[entry.transactionId]?.transactionType) {
-        "HOA", "OHB" -> entry.amount
-        "HOR" -> entry.amount.negate()
+        in holdCreditTransactionTypes -> entry.amount
+        in holdDebitTransactionTypes -> entry.amount.negate()
         else -> BigDecimal.ZERO
       }
     }
