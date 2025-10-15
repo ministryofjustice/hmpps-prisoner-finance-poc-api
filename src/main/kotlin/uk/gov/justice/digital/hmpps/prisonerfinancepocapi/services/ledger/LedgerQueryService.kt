@@ -18,6 +18,8 @@ import java.sql.Timestamp
 import java.time.LocalDate
 import java.util.UUID
 
+const val MIGRATION_CLEARING_ACCOUNT = 9999
+
 @Service
 open class LedgerQueryService(
   private val prisonRepository: PrisonRepository,
@@ -199,12 +201,15 @@ open class LedgerQueryService(
     val prison = prisonRepository.findByCode(prisonId) ?: return emptyList()
     val accounts = accountRepository.findByPrisonId(prison.id!!)
 
-    return accounts.filter { it.accountType == AccountType.GENERAL_LEDGER }.map { account ->
-      GeneralLedgerBalanceDetails(
-        accountCode = account.accountCode,
-        balance = ledgerBalanceService.calculateGeneralLedgerAccountBalance(account),
-      )
-    }
+    return accounts
+      .filter { it.accountType == AccountType.GENERAL_LEDGER }
+      .filter { it.accountCode != MIGRATION_CLEARING_ACCOUNT }
+      .map { account ->
+        GeneralLedgerBalanceDetails(
+          accountCode = account.accountCode,
+          balance = ledgerBalanceService.calculateGeneralLedgerAccountBalance(account),
+        )
+      }
   }
 
   private fun findPrisonAccount(prisonId: String, accountCode: Int): Account? {

@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.config.ROLE_PRISONER_F
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerPointInTimeBalance
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.MIGRATION_CLEARING_ACCOUNT
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
@@ -133,6 +134,7 @@ class MigrateGeneralLedgerBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
       .expectBody()
+      .jsonPath("$.items[?(@.accountCode == ${MIGRATION_CLEARING_ACCOUNT})]").isEmpty
       .jsonPath("$.items[?(@.accountCode == 1505)].balance").value<List<Double>> { balances ->
         assertThat(balances).containsExactly(BigDecimal("10587.23").toDouble())
       }
