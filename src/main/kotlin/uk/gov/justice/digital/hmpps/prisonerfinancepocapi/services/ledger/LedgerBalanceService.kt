@@ -5,11 +5,13 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Transaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionEntry
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerEstablishmentBalance
 import java.math.BigDecimal
+import java.time.Instant
 
 @Service
 class LedgerBalanceService(
@@ -17,6 +19,7 @@ class LedgerBalanceService(
   private val transactionEntryRepository: TransactionEntryRepository,
   private val prisonRepository: PrisonRepository,
   private val migrationFilterService: MigrationFilterService,
+  private val accountRepository: AccountRepository,
 ) {
 
   private val prisonerSubAccountCodes = listOf(2101, 2102, 2103)
@@ -47,7 +50,7 @@ class LedgerBalanceService(
    */
   fun calculateGeneralLedgerAccountBalance(account: Account): BigDecimal {
     if (account.accountCode in prisonerSubAccountCodes) {
-      return calculateAggregatedPrisonerGeneralLedgerAccountBalance(account)
+      return calculateGLBalanceFromPrisonerTransactions(account)
     }
 
     val (transactionEntries, allTransactions) = retrieveAccountTransactionData(account.id!!)
@@ -92,18 +95,91 @@ class LedgerBalanceService(
   }
 
   /**
-   * Handles aggregation for prisoner general ledger accounts (2101, 2102, 2103) by delegating
-   * to a repository method that sums the net balance for that prison/code combination.
+   * Calculates the balance for Prisoner General Ledger Accounts (2101, 2102, 2103) for a specific prison.
+   * It starts with the GL account's determined initial balance, then aggregates all subsequent offender
+   * transactions that occurred at that prison. Migration transactions are excluded from the aggregation.
    */
-  private fun calculateAggregatedPrisonerGeneralLedgerAccountBalance(account: Account): BigDecimal {
+  private fun calculateGLBalanceFromPrisonerTransactions(account: Account): BigDecimal {
+    val accountId = account.id!!
     val targetAccountCode = account.accountCode
+
     val prisonCode = prisonRepository.findById(account.prisonId!!).orElse(null)?.code
       ?: throw IllegalStateException("Prison not found for ID: ${account.prisonId}")
 
-    return transactionEntryRepository.calculateAggregatedBalance(
-      accountCode = targetAccountCode,
-      prison = prisonCode,
-    ) ?: BigDecimal.ZERO
+    val (glEntries, glTransactions) = retrieveAccountTransactionData(accountId)
+
+    val glMigrationInfo = migrationFilterService.findLatestMigrationInfo(accountId, glTransactions)
+
+    val initialBalance = determineOpeningGLBalance(account, glEntries, glTransactions, glMigrationInfo)
+    val cutoffDate = glMigrationInfo?.transactionDate ?: Instant.EPOCH
+
+    val prisonerSubAccounts = accountRepository.findByAccountCodeAndPrisonNumberIsNotNull(accountCode = targetAccountCode)
+
+    val netTransactionsTotal = calculateNetBalanceAdjustment(
+      prisonerSubAccounts = prisonerSubAccounts,
+      prisonCode = prisonCode,
+      cutoffDate = cutoffDate,
+    )
+
+    return initialBalance + netTransactionsTotal
+  }
+
+  /**
+   * Calculates the net effect of all offender transactions occurring after the latest balance date at the specified prison,
+   * excluding migration transactions.
+   */
+  private fun calculateNetBalanceAdjustment(
+    prisonerSubAccounts: List<Account>,
+    prisonCode: String,
+    cutoffDate: Instant,
+  ): BigDecimal = prisonerSubAccounts.sumOf { prisonerAccount ->
+    val (prisonerEntries, prisonerTransactions) = retrieveAccountTransactionData(prisonerAccount.id!!)
+
+    prisonerEntries
+      .mapNotNull { entry ->
+        val transaction = prisonerTransactions[entry.transactionId]
+        val transactionInstant = transaction?.date?.toInstant()
+        if (transaction != null && transactionInstant != null) {
+          Triple(entry, transaction, transactionInstant)
+        } else {
+          null
+        }
+      }
+      .filter { (_, transaction, _) -> transaction.prison == prisonCode }
+      .filter { (_, transaction, _) ->
+        transaction.transactionType !in migrationFilterService.migrationTypes
+      }
+      .filter { (_, _, transactionInstant) -> !transactionInstant.isBefore(cutoffDate) }
+      .sumOf { (entry, _, _) ->
+        val isNaturalPosting = (entry.entryType == prisonerAccount.postingType)
+        if (isNaturalPosting) entry.amount else entry.amount.negate()
+      }
+  }
+
+  /**
+   * Calculates the resulting General Ledger opening balance by aggregating entries
+   * belonging to the latest migration transaction.
+   */
+  private fun determineOpeningGLBalance(
+    account: Account,
+    transactionEntries: List<TransactionEntry>,
+    allTransactions: Map<Long, Transaction>,
+    glMigrationInfo: MigrationFilterService.LatestMigrationInfo?,
+  ): BigDecimal {
+    if (glMigrationInfo == null) {
+      return BigDecimal.ZERO
+    }
+
+    val latestMigrationCreatedAt = glMigrationInfo.createdAt
+
+    return transactionEntries
+      .filter { entry ->
+        allTransactions[entry.transactionId]?.createdAt?.equals(latestMigrationCreatedAt) ?: false
+      }
+      .sumOf { entry ->
+        val isNaturalPosting = (entry.entryType == account.postingType)
+        if (isNaturalPosting) entry.amount else entry.amount.negate()
+      }
   }
 
   /**
@@ -124,8 +200,9 @@ class LedgerBalanceService(
     allTransactions: Map<Long, Transaction>,
   ): Map<String, List<TransactionEntry>> = transactionEntries
     .mapNotNull { entry ->
-      val prisonCode = allTransactions[entry.transactionId]?.prison
-      if (prisonCode != null) entry to prisonCode else null
+      allTransactions[entry.transactionId]?.prison?.let { prisonCode ->
+        entry to prisonCode
+      }
     }
     .groupBy { it.second }
     .mapValues { (_, pairs) -> pairs.map { it.first } }

@@ -29,8 +29,6 @@ open class MigrationService(
 
     val migrationBatchTime = Instant.now()
 
-    val prisonerAccountCodes = listOf(2101, 2102, 2103)
-
     val prison = prisonService.getPrison(prisonId)
       ?: prisonService.createPrison(prisonId)
 
@@ -43,7 +41,6 @@ open class MigrationService(
     )
 
     request.accountBalances
-      .filter { balanceData -> balanceData.accountCode !in prisonerAccountCodes }
       .forEach { balanceData ->
 
         val transactionTimestamp = timeConversionService.toUtcInstant(balanceData.asOfTimestamp)

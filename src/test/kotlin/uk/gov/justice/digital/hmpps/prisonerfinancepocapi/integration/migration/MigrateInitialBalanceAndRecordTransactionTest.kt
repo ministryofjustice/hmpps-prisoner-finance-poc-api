@@ -23,16 +23,19 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
 
   @Test
   fun `should migrate initial balance then sync offender transaction and verify balances`() {
-    val migrateTimestamp = LocalDateTime.of(2025, 6, 1, 0, 0, 0) // Migration occurs first
-    val transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17) // Transaction occurs later
+    val migrateTimestamp = LocalDateTime.of(2025, 6, 1, 0, 0, 0)
+    val transactionTimestamp = LocalDateTime.of(2025, 6, 2, 0, 8, 17)
 
     val prisonId = UUID.randomUUID().toString().substring(0, 3).uppercase()
-    val prisonAccountCode = 1501
-    val initialBalance = BigDecimal("-123.45")
+    val earningsAccountCode = 1501
+    val spendsAccountCode = 2102
+    val initialEarningsBalance = BigDecimal("-123.45")
+    val initialSpendsBalance = BigDecimal("23.00")
 
     val migrationRequestBody = GeneralLedgerBalancesSyncRequest(
       accountBalances = listOf(
-        GeneralLedgerPointInTimeBalance(accountCode = prisonAccountCode, balance = initialBalance, asOfTimestamp = migrateTimestamp),
+        GeneralLedgerPointInTimeBalance(accountCode = earningsAccountCode, balance = initialEarningsBalance, asOfTimestamp = migrateTimestamp),
+        GeneralLedgerPointInTimeBalance(accountCode = spendsAccountCode, balance = initialSpendsBalance, asOfTimestamp = migrateTimestamp),
       ),
     )
 
@@ -47,16 +50,24 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
 
     webTestClient
       .get()
-      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonAccountCode)
+      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, earningsAccountCode)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.balance").isEqualTo(initialBalance.toDouble())
+      .jsonPath("$.balance").isEqualTo(initialEarningsBalance.toDouble())
+
+    webTestClient
+      .get()
+      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, spendsAccountCode)
+      .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.balance").isEqualTo(initialSpendsBalance.toDouble())
 
     val prisonNumber = UUID.randomUUID().toString().substring(0, 8).uppercase()
     val transactionAmount = BigDecimal("1.25")
-    val offenderAccountCode = 2102
 
     val transactionRequest = SyncOffenderTransactionRequest(
       transactionId = Random.nextLong(),
@@ -77,8 +88,8 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
           amount = transactionAmount.toDouble(),
           reference = null,
           generalLedgerEntries = listOf(
-            GeneralLedgerEntry(entrySequence = 1, code = prisonAccountCode, postingType = "DR", amount = transactionAmount.toDouble()),
-            GeneralLedgerEntry(entrySequence = 2, code = offenderAccountCode, postingType = "CR", amount = transactionAmount.toDouble()),
+            GeneralLedgerEntry(entrySequence = 1, code = earningsAccountCode, postingType = "DR", amount = transactionAmount.toDouble()),
+            GeneralLedgerEntry(entrySequence = 2, code = spendsAccountCode, postingType = "CR", amount = transactionAmount.toDouble()),
           ),
         ),
       ),
@@ -101,11 +112,11 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
       .expectBody()
       .jsonPath("$.action").isEqualTo("CREATED")
 
-    val expectedFinalBalance = initialBalance.add(transactionAmount)
+    val expectedFinalBalance = initialEarningsBalance.add(transactionAmount)
 
     webTestClient
       .get()
-      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, prisonAccountCode)
+      .uri("/prisons/{prisonId}/accounts/{accountCode}", prisonId, earningsAccountCode)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .exchange()
       .expectStatus().isOk
@@ -114,7 +125,7 @@ class MigrateInitialBalanceAndRecordTransactionTest : IntegrationTestBase() {
 
     webTestClient
       .get()
-      .uri("/prisoners/{prisonNumber}/accounts/{offenderAccountCode}", prisonNumber, offenderAccountCode)
+      .uri("/prisoners/{prisonNumber}/accounts/{offenderAccountCode}", prisonNumber, spendsAccountCode)
       .headers(setAuthorisation(roles = listOf(ROLE_PRISONER_FINANCE_SYNC)))
       .exchange()
       .expectStatus().isOk
