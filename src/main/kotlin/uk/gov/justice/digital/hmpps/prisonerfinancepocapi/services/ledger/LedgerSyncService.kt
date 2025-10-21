@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncGeneralLedgerTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
@@ -16,11 +15,8 @@ open class LedgerSyncService(
   private val accountService: AccountService,
   private val transactionService: TransactionService,
   private val timeConversionService: TimeConversionService,
+  private val legacyTransactionFixService: LegacyTransactionFixService,
 ) {
-
-  private companion object {
-    private val TRANSACTION_TYPES_SKIPPED_IF_NO_GL_ENTRIES = setOf("OT", "ATOF")
-  }
 
   @Transactional
   open fun syncOffenderTransaction(request: SyncOffenderTransactionRequest): UUID {
@@ -28,17 +24,19 @@ open class LedgerSyncService(
       throw IllegalArgumentException("No offender transactions provided in the request.")
     }
 
-    val prison = prisonService.getPrison(request.caseloadId)
-      ?: prisonService.createPrison(request.caseloadId)
+    val fixedRequest = legacyTransactionFixService.fixLegacyTransactions(request)
 
-    val transactionTimestamp = timeConversionService.toUtcInstant(request.transactionTimestamp)
-    val synchronizedTransactionId = UUID.randomUUID()
-
-    val transactionsToProcess = request.offenderTransactions.filter { offenderTransaction ->
-      !shouldIgnoreOffenderTransaction(offenderTransaction)
+    if (fixedRequest.offenderTransactions.isEmpty()) {
+      return UUID.randomUUID()
     }
 
-    transactionsToProcess.forEach { offenderTransaction ->
+    val prison = prisonService.getPrison(fixedRequest.caseloadId)
+      ?: prisonService.createPrison(fixedRequest.caseloadId)
+
+    val transactionTimestamp = timeConversionService.toUtcInstant(fixedRequest.transactionTimestamp)
+    val synchronizedTransactionId = UUID.randomUUID()
+
+    fixedRequest.offenderTransactions.forEach { offenderTransaction ->
       val transactionEntries = offenderTransaction.generalLedgerEntries.map { glEntry ->
         val account = accountService.resolveAccount(
           glEntry.code,
@@ -53,9 +51,9 @@ open class LedgerSyncService(
         description = offenderTransaction.description,
         entries = transactionEntries,
         transactionTimestamp = transactionTimestamp,
-        legacyTransactionId = request.transactionId,
+        legacyTransactionId = fixedRequest.transactionId,
         synchronizedTransactionId = synchronizedTransactionId,
-        request.caseloadId,
+        fixedRequest.caseloadId,
       )
     }
 
@@ -96,14 +94,4 @@ open class LedgerSyncService(
 
     return synchronizedTransactionId
   }
-
-  /**
-   * Checks if an OffenderTransaction should be ignored.
-   * 1. There are no General Ledger entries, AND
-   * 2. The transaction type is one of the designated types AND
-   * 3. The entrySequence is 2.
-   */
-  private fun shouldIgnoreOffenderTransaction(offenderTransaction: OffenderTransaction): Boolean = offenderTransaction.generalLedgerEntries.isEmpty() &&
-    TRANSACTION_TYPES_SKIPPED_IF_NO_GL_ENTRIES.contains(offenderTransaction.type) &&
-    offenderTransaction.entrySequence == 2
 }
