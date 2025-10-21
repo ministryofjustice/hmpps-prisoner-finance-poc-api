@@ -10,7 +10,7 @@ import java.time.Instant
 class MigrationFilterService(
   private val transactionEntryRepository: TransactionEntryRepository,
 ) {
-  private val migrationTypes = setOf("OB", "OHB")
+  val migrationTypes = setOf("OB", "OHB")
 
   data class LatestMigrationInfo(
     val createdAt: Instant,
@@ -55,7 +55,7 @@ class MigrationFilterService(
     }
   }
 
-  private fun findLatestMigrationInfo(accountId: Long, allTransactions: Map<Long, Transaction>): LatestMigrationInfo? {
+  fun findLatestMigrationInfo(accountId: Long, allTransactions: Map<Long, Transaction>): LatestMigrationInfo? {
     val transactionIds = transactionEntryRepository.findByAccountId(accountId).map { it.transactionId }.distinct()
 
     val latestCreatedAt = allTransactions.values

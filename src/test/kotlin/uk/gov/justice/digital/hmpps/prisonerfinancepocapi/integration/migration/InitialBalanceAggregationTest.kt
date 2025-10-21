@@ -32,6 +32,7 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
     val prisonSpendsGLAccountCode = 2102
     val prisonBankGLAccountCode = 1501
 
+    val initialEarningsBalance = BigDecimal("100.00")
     val initialPrisonerBalance = BigDecimal("1000.00")
     val transactionAmount = BigDecimal("50.00")
 
@@ -42,6 +43,11 @@ class InitialBalanceAggregationTest : IntegrationTestBase() {
       accountBalances = listOf(
         GeneralLedgerPointInTimeBalance(
           accountCode = prisonBankGLAccountCode,
+          balance = initialEarningsBalance,
+          asOfTimestamp = migrateTimestamp,
+        ),
+        GeneralLedgerPointInTimeBalance(
+          accountCode = prisonSpendsGLAccountCode,
           balance = initialPrisonerBalance,
           asOfTimestamp = migrateTimestamp,
         ),

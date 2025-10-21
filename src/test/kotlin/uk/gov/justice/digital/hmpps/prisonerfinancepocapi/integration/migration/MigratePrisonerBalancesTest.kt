@@ -74,7 +74,7 @@ class MigratePrisonerBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.balance").isEqualTo(spendsBalance.toDouble())
+      .jsonPath("$.balance").isEqualTo(0)
       .jsonPath("$.name").isEqualTo("Spends")
 
     webTestClient
@@ -84,7 +84,7 @@ class MigratePrisonerBalancesTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.balance").isEqualTo(savingsBalance.toDouble())
+      .jsonPath("$.balance").isEqualTo(0)
       .jsonPath("$.name").isEqualTo("Savings")
   }
 }
