@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.Priso
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.GeneralLedgerEntry
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.OffenderTransaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.sync.SyncOffenderTransactionRequest
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.MIGRATION_CLEARING_ACCOUNT
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
@@ -22,7 +23,6 @@ class StaggeredMigrationBalanceAggregationTest : IntegrationTestBase() {
   private lateinit var objectMapper: ObjectMapper
 
   private val spendsAccountCode = 2102
-  private val migGlAccountCode = 9999
 
   private val oldestMigrationTime = LocalDateTime.of(2024, 1, 1, 10, 0, 0)
   private val middleTransactionTime = LocalDateTime.of(2024, 2, 1, 10, 0, 0)
@@ -80,7 +80,7 @@ class StaggeredMigrationBalanceAggregationTest : IntegrationTestBase() {
       offenderPostingType = "CR",
       amount = transactionBetweenMigrations,
       transactionType = "A_EARN",
-      glCode = migGlAccountCode,
+      glCode = MIGRATION_CLEARING_ACCOUNT,
       glPostingType = "DR",
     )
     postSyncTransaction(betweenTransactionRequest)

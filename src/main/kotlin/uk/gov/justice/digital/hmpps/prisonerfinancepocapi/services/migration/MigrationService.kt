@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.Priso
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.RequestCaptureService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.TimeConversionService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.AccountService
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.MIGRATION_CLEARING_ACCOUNT
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.PrisonService
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.ledger.TransactionService
 import java.math.BigDecimal
@@ -35,10 +36,10 @@ open class MigrationService(
 
     val clearingAccount = accountService.findGeneralLedgerAccount(
       prisonId = prison.id!!,
-      accountCode = 9999,
+      accountCode = MIGRATION_CLEARING_ACCOUNT,
     ) ?: accountService.createGeneralLedgerAccount(
       prisonId = prison.id,
-      accountCode = 9999,
+      accountCode = MIGRATION_CLEARING_ACCOUNT,
     )
 
     request.accountBalances
@@ -112,10 +113,10 @@ open class MigrationService(
         ?: prisonService.createPrison(balanceData.prisonId)
       val clearingAccount = accountService.findGeneralLedgerAccount(
         prisonId = prison.id!!,
-        accountCode = 9999,
+        accountCode = MIGRATION_CLEARING_ACCOUNT,
       ) ?: accountService.createGeneralLedgerAccount(
         prisonId = prison.id,
-        accountCode = 9999,
+        accountCode = MIGRATION_CLEARING_ACCOUNT,
       )
 
       val holdAccount = accountService.findGeneralLedgerAccount(
