@@ -2,9 +2,9 @@ services:
   hmpps-prisoner-finance-poc-api:
     build:
       context: .
+    container_name: hmpps-prisoner-finance-poc-api
     networks:
       - hmpps
-    container_name: hmpps-prisoner-finance-poc-api
     ports:
       - "8080:8080"
     healthcheck:
@@ -12,34 +12,13 @@ services:
     environment:
       - SERVER_PORT=8080
       - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
-      - DB_SERVER=hmpps-prisoner-finance-poc-db
-      - DB_NAME=nomis_sync
-      - DB_USER=postgres
-      - DB_PASS=postgres
+      - SPRING_PROFILES_ACTIVE=local
     depends_on:
       hmpps-auth:
         condition: service_started
       hmpps-prisoner-finance-poc-db:
         condition: service_healthy
         restart: true
-
-  hmpps-prisoner-finance-poc-db:
-    container_name: hmpps-prisoner-finance-poc-db
-    image: postgres:latest
-    restart: always
-    networks:
-      - hmpps
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=nomis_sync
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   hmpps-auth:
     image: quay.io/hmpps/hmpps-auth:latest
@@ -54,6 +33,27 @@ services:
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=dev
       - APPLICATION_AUTHENTICATION_UI_ALLOWLIST=0.0.0.0/0
+
+  hmpps-prisoner-finance-poc-db:
+    container_name: hmpps-prisoner-finance-poc-db
+    image: postgres:latest
+    restart: always
+    networks:
+      - hmpps
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nomis_sync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 networks:
   hmpps:
