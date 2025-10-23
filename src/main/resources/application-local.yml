@@ -1,11 +1,17 @@
 spring:
   jpa:
     show-sql: true
+    hibernate:
+      ddl-auto: create
 
   datasource:
-    url: 'jdbc:postgresql://localhost:5432/nomis_sync?sslmode=prefer'
+    url: 'jdbc:postgresql://localhost/postgres?sslmode=prefer'
     username: postgres
     password: postgres
 
-hmpps-auth:
-  url: "http://localhost:8090/auth"
+  flyway:
+    enabled: false
+
+services:
+  hmpps-auth:
+    url: ${HMPPS_AUTH_URL:http://localhost:8090/auth}

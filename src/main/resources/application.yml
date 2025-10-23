@@ -6,22 +6,34 @@ spring:
   application:
     name: hmpps-prisoner-finance-poc-api
 
+  http:
+    codecs:
+      max-in-memory-size: 10MB
+
   jackson:
     date-format: "yyyy-MM-dd HH:mm:ss"
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${services.hmpps-auth.url}/.well-known/jwks.json
+
+      client:
+        provider:
+          hmpps-auth:
+            token-uri: ${services.hmpps-auth.url}/oauth/token
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
   datasource:
     url: 'jdbc:postgresql://${DB_SERVER}/${DB_NAME}?sslmode=prefer'
     username: ${DB_USER}
     password: ${DB_PASS}
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    open-in-view: false
-    generate-ddl: false
-    hibernate:
-      ddl-auto: none
 
   flyway:
     enabled: true
@@ -73,5 +85,6 @@ management:
       cache:
         time-to-live: 2000ms
 
-hmpps-auth:
-  url: ${HMPPS_AUTH_URL}
+services:
+  hmpps-auth:
+    url: ${HMPPS_AUTH_URL}
