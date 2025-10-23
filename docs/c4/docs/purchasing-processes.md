@@ -13,7 +13,7 @@ The shop service will need to set up;
 
 #### 1. Ordering within available spends limit
 
-This would be the most common payment process, it is only effective for a pre-delivery process where the payment is taken before the purchase is fulfilled (such as with Amazon or other ecommerce services). Failure will occur if there is not enough available spends to complete the purchase, even if the person has more funds in their private cash or savings sub-accounts.
+This would be the most common payment process, it is only effective for a pre-delivery process where the payment is taken before the purchase is fulfilled (such as with Amazon or other ecommerce services). Failure will occur if there is not enough available spends to complete the purchase, even if the person has more funds in their private cash or savings subaccounts.
 
 ```mermaid
 sequenceDiagram
@@ -99,7 +99,7 @@ Example of ADI instruction recorded at step 14:
 
 #### 2. Recording a purchase from private cash
 
-This process would take place in circumstances where items are not limited to the available spends limit. It is primarily for emergency purchases or items that are not restricted to available spends such as money to friends and family members. Failure will occur if there is not enough private cash to complete the purchase, even if the person has more funds in their available spends or savings sub-accounts.
+This process would take place in circumstances where items are not limited to the available spends limit. It is primarily for emergency purchases or items that are not restricted to available spends such as money to friends and family members. Failure will occur if there is not enough private cash to complete the purchase, even if the person has more funds in their available spends or savings subaccounts.
 
 ```mermaid
 sequenceDiagram
@@ -185,7 +185,7 @@ Example of ADI instruction recorded at step 14:
 
 #### 3. Ordering using available spends and additional private cash
 
-This process would take place in circumstances such as dental treatment or where the governor has given permission for the person to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the person has more funds in their savings sub-accounts.
+This process would take place in circumstances such as dental treatment or where the governor has given permission for the person to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the person has more funds in their savings subaccounts.
 
 ```mermaid
 sequenceDiagram
@@ -222,9 +222,9 @@ sequenceDiagram
     API ->> LEDGER: Check private cash
     LEDGER -->> API: Private cash balance
     API -->> API: Confirm additional funds available
-  activate LEDGER
+    activate LEDGER
     API ->> LEDGER: Create two <pending><br/>prisoner debit ledger entries
-    note right of LEDGER: Seperate ledger entries<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
+    note right of LEDGER: Separate ledger entries<br/>from each account to<br/>the supplier with the<br/>same description and<br/>transaction id.
     LEDGER -->> API: Success response
     deactivate LEDGER
   end
@@ -361,7 +361,7 @@ sequenceDiagram
 
 ```
 
-Example `PaymentRequest` showing one supplier payment to be taken from from advance if the person has no other funds submitted at step 4:
+Example `PaymentRequest` showing one supplier payment to be taken from advance if the person has no other funds submitted at step 4:
 
 ```shell
 curl -X 'POST' \
