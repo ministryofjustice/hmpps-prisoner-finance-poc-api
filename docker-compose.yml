@@ -12,7 +12,10 @@ services:
     environment:
       - SERVER_PORT=8080
       - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
-      - SPRING_PROFILES_ACTIVE=local
+      - DB_SERVER=hmpps-prisoner-finance-poc-db
+      - DB_NAME=nomis_sync
+      - DB_USER=postgres
+      - DB_PASS=postgres
     depends_on:
       hmpps-auth:
         condition: service_started
@@ -49,15 +52,10 @@ services:
       start_period: 30s
       timeout: 10s
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: nomis_sync
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=nomis_sync
 
 networks:
   hmpps:
-
-volumes:
-  postgres_data:
 
