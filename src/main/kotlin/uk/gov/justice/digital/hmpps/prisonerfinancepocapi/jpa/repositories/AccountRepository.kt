@@ -11,5 +11,4 @@ interface AccountRepository : JpaRepository<Account, Long> {
   fun findByPrisonId(prisonId: Long): List<Account>
   fun findByPrisonNumber(prisonNumber: String): List<Account>
   fun findByPrisonIdAndAccountCodeAndPrisonNumberIsNull(prisonId: Long, accountCode: Int): Account?
-  fun findByAccountCodeAndPrisonNumberIsNotNull(accountCode: Int): List<Account>
 }
