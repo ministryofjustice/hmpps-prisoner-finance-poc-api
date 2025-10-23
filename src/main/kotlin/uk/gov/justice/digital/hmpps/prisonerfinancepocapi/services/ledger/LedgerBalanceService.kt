@@ -5,12 +5,12 @@ import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Transaction
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.TransactionEntry
-import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.AccountRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.PrisonRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionEntryRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.repositories.TransactionRepository
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.PrisonerEstablishmentBalance
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.time.Instant
 
 @Service
@@ -19,7 +19,6 @@ class LedgerBalanceService(
   private val transactionEntryRepository: TransactionEntryRepository,
   private val prisonRepository: PrisonRepository,
   private val migrationFilterService: MigrationFilterService,
-  private val accountRepository: AccountRepository,
 ) {
 
   private val prisonerSubAccountCodes = listOf(2101, 2102, 2103)
@@ -100,23 +99,18 @@ class LedgerBalanceService(
    * transactions that occurred at that prison. Migration transactions are excluded from the aggregation.
    */
   private fun calculateGLBalanceFromPrisonerTransactions(account: Account): BigDecimal {
-    val accountId = account.id!!
-    val targetAccountCode = account.accountCode
+    val prisonCode = prisonRepository.findById(account.prisonId!!)
+      .orElseThrow { IllegalStateException("Prison not found for ID: ${account.prisonId}") }
+      .code
 
-    val prisonCode = prisonRepository.findById(account.prisonId!!).orElse(null)?.code
-      ?: throw IllegalStateException("Prison not found for ID: ${account.prisonId}")
-
-    val (glEntries, glTransactions) = retrieveAccountTransactionData(accountId)
-
-    val glMigrationInfo = migrationFilterService.findLatestMigrationInfo(accountId, glTransactions)
+    val (glEntries, glTransactions) = retrieveAccountTransactionData(account.id!!)
+    val glMigrationInfo = migrationFilterService.findLatestMigrationInfo(account.id, glTransactions)
 
     val initialBalance = determineOpeningGLBalance(account, glEntries, glTransactions, glMigrationInfo)
-    val cutoffDate = glMigrationInfo?.transactionDate ?: Instant.EPOCH
-
-    val prisonerSubAccounts = accountRepository.findByAccountCodeAndPrisonNumberIsNotNull(accountCode = targetAccountCode)
+    val cutoffDate = Timestamp.from(glMigrationInfo?.transactionDate ?: Instant.EPOCH)
 
     val netTransactionsTotal = calculateNetBalanceAdjustment(
-      prisonerSubAccounts = prisonerSubAccounts,
+      targetAccountCode = account.accountCode,
       prisonCode = prisonCode,
       cutoffDate = cutoffDate,
     )
@@ -129,31 +123,18 @@ class LedgerBalanceService(
    * excluding migration transactions.
    */
   private fun calculateNetBalanceAdjustment(
-    prisonerSubAccounts: List<Account>,
+    targetAccountCode: Int,
     prisonCode: String,
-    cutoffDate: Instant,
-  ): BigDecimal = prisonerSubAccounts.sumOf { prisonerAccount ->
-    val (prisonerEntries, prisonerTransactions) = retrieveAccountTransactionData(prisonerAccount.id!!)
+    cutoffDate: Timestamp,
+  ): BigDecimal {
+    val netTotal = transactionEntryRepository.calculateNetBalanceAdjustment(
+      targetAccountCode = targetAccountCode,
+      prisonCode = prisonCode,
+      cutoffDate = cutoffDate,
+      migrationTypes = migrationFilterService.migrationTypes,
+    )
 
-    prisonerEntries
-      .mapNotNull { entry ->
-        val transaction = prisonerTransactions[entry.transactionId]
-        val transactionInstant = transaction?.date?.toInstant()
-        if (transaction != null && transactionInstant != null) {
-          Triple(entry, transaction, transactionInstant)
-        } else {
-          null
-        }
-      }
-      .filter { (_, transaction, _) -> transaction.prison == prisonCode }
-      .filter { (_, transaction, _) ->
-        transaction.transactionType !in migrationFilterService.migrationTypes
-      }
-      .filter { (_, _, transactionInstant) -> !transactionInstant.isBefore(cutoffDate) }
-      .sumOf { (entry, _, _) ->
-        val isNaturalPosting = (entry.entryType == prisonerAccount.postingType)
-        if (isNaturalPosting) entry.amount else entry.amount.negate()
-      }
+    return netTotal ?: BigDecimal.ZERO
   }
 
   /**
@@ -166,19 +147,14 @@ class LedgerBalanceService(
     allTransactions: Map<Long, Transaction>,
     glMigrationInfo: MigrationFilterService.LatestMigrationInfo?,
   ): BigDecimal {
-    if (glMigrationInfo == null) {
-      return BigDecimal.ZERO
-    }
-
-    val latestMigrationCreatedAt = glMigrationInfo.createdAt
+    val latestMigrationCreatedAt = glMigrationInfo?.createdAt ?: return BigDecimal.ZERO
 
     return transactionEntries
       .filter { entry ->
         allTransactions[entry.transactionId]?.createdAt?.equals(latestMigrationCreatedAt) ?: false
       }
       .sumOf { entry ->
-        val isNaturalPosting = (entry.entryType == account.postingType)
-        if (isNaturalPosting) entry.amount else entry.amount.negate()
+        if (entry.entryType == account.postingType) entry.amount else entry.amount.negate()
       }
   }
 
