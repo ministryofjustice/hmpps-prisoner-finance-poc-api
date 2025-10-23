@@ -69,12 +69,11 @@ The `OffenderTransaction` records is created to show the movement of money into 
 Two `GLTransaction` records are created to show the movement of money between the prisons overall budget for the collective prisoner 
 subaccounts and the General Ledger account configured for the transaction type.
 
----
-***NOTE:** When an `OffenderTransaction` record is created to transfer money between two prisoner subaccounts, two mirrored 
+**NOTE:** *When an `OffenderTransaction` record is created to transfer money between two prisoner subaccounts, two mirrored 
 `OffenderTransaction` records are created to show the money moving out of one subaccount and into the other subaccount 
 along with the usual two `GLTransaction` records, but they will only be associated with the first `OffenderTransaction` 
 the second will have no `GLTransaction` records.*
----
+
 
 ```mermaid
 sequenceDiagram
