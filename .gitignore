@@ -79,4 +79,5 @@ sonar-project.properties
 docs/c4/.structurizr
 docs/c4/plantuml
 docs/c4/mermaid
+docs/c4/png
 docs/c4/**/*.json
