@@ -3,20 +3,24 @@
 From the root of this repository run the following command to start the structurizr lite web service.
 
 ```shell
-docker pull structurizr/lite && /
-docker run -it --rm -p 8080:8080 -v $(pwd)/docs/c4:/usr/local/structurizr structurizr/lite
+make serve-structurizer
 ```
 
 this will create a web service available at `http://localhost:8080` which will allow you to explore the workspace.
 
-## Exporting to mermaid
+## Exporting to Mermaid
 
-To export views to mermaid run the folling docker command
+Mermaid code can be used in Github Markdown so to export views to mermaid run the following docker command;
 
+```shell
+make export-c4-mermaid
 ```
-docker pull structurizr/cli:latest
-docker run -it --rm -v $(pwd)/docs/c4:/usr/local/structurizr structurizr/cli \
-  export --workspace prisoner_finance.dsl --format mermaid --output ./mermaid
+## Exporting to PlantUML
+
+To export views to PlantUML run the following docker command;
+
+```shell
+make export-c4-plantuml
 ```
 
 # Architecture
