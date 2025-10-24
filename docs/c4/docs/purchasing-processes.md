@@ -1,17 +1,15 @@
-# Process flows for Prisoner finance
+# Purchasing
 
-## Purchasing
-
-### Pre-requisites
+## Pre-requisites
 
 The shop service will need to set up;
 
 1. Suppliers general ledger account details that will be used to collect payments
 2. Accepted payment methods including combination priorities
 
-### Payment scenarios
+## Payment scenarios
 
-#### 1. Ordering within available spends limit
+### Ordering within available spends limit
 
 This would be the most common payment process, it is only effective for a pre-delivery process where the payment is taken before the purchase is fulfilled (such as with Amazon or other ecommerce services). Failure will occur if there is not enough available spends to complete the purchase, even if the person has more funds in their private cash or savings subaccounts.
 
@@ -97,7 +95,7 @@ Example of ADI instruction recorded at step 14:
 | O       | 4444   | 11111111    | 2222222222 | 0000000   | 00000000 | 0000         | 0000000 |       | 1.5    | Canteen Spends - 09.01.2024 - CANTEEN-0001 |          |
 | Totals: |        |             |            |           |          |              |         | £1.50 | £1.50  |                                            |          |
 
-#### 2. Recording a purchase from private cash
+### Recording a purchase from private cash
 
 This process would take place in circumstances where items are not limited to the available spends limit. It is primarily for emergency purchases or items that are not restricted to available spends such as money to friends and family members. Failure will occur if there is not enough private cash to complete the purchase, even if the person has more funds in their available spends or savings subaccounts.
 
@@ -183,7 +181,7 @@ Example of ADI instruction recorded at step 14:
 | O       | 4444   | 11111111    | 5555555555 | 0000000   | 00000000 | 0000         | 0000000 |       | 0.25   | Pharmacy Spends - 09.01.2024 - PHARMA-6098-GMI |          |
 | Totals: |        |             |            |           |          |              |         | £0.25 | £0.25  |                                                |          |
 
-#### 3. Ordering using available spends and additional private cash
+### Ordering using available spends and additional private cash
 
 This process would take place in circumstances such as dental treatment or where the governor has given permission for the person to spend more than their available spends such as after a compensation payment. Failure will occur if there is not enough available spends and private cash to complete the purchase, even if the person has more funds in their savings subaccounts.
 
@@ -286,7 +284,7 @@ Example of ADI instruction recorded at step 14:
 | O       | 4444   | 11111111    | 3333333333 | 0000000   | 00000000 | 0000         | 0000000 |        | 29.95  | Catalogue Spends - 09.01.2024 - CATALOGUE-6098-LVI |          |
 | Totals: |        |             |            |           |          |              |         | £35.00 | £35.00 |                                                    |          |
 
-#### 4. Purchasing with advance only
+### Purchasing with advance only
 
 This process would take place in circumstances where the person does not have any money available to spend such as when they first arrive in prison.
 
@@ -385,14 +383,14 @@ curl -X 'POST' \
 }'
 ```
 
-#### 5. Ordering using available funds and advance
+### Ordering using available funds and advance
 
 ```mermaid
 sequenceDiagram
     actor User as User
 ```
 
-#### 6. Purchasing from multiple suppliers
+### Purchasing from multiple suppliers
 
 This process is often employed as part of the canteen or tuck shop processes where several different items can be purchased from several different suppliers such as BT and DHL.
 
@@ -443,7 +441,7 @@ sequenceDiagram
     deactivate LEDGER
 ```
 
-#### 7. Purchasing for several people from same supplier
+### Purchasing for several people from same supplier
 
 This process is often employed for batch processing where several items have been ordered by several different people.
 
@@ -498,7 +496,7 @@ sequenceDiagram
     deactivate LEDGER
 ```
 
-#### 8. Purchasing for several people from multiple suppliers
+### Purchasing for several people from multiple suppliers
 
 This process is employed when batch processing multiple order as part of the canteen process or similar where several different items can be purchased from several different suppliers such as BT and DHL for several different people.
 
