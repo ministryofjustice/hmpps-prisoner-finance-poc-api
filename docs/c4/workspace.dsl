@@ -3,6 +3,9 @@ workspace {
     !identifiers hierarchical
     !impliedRelationships true
 
+    # !plugin com.structurizr.dsl.plugin.documentation.Mermaid
+    # !plugin com.structurizr.dsl.plugin.documentation.PlantUML
+
     model {
         archetypes {
             api = container {
@@ -71,6 +74,8 @@ workspace {
           generic = expressFrontend "Prisoner Finance UIs"
           specialised = expressFrontend "Specialised task UIs"
           payments = springBootAPI "Payments API" {
+            !docs ./docs/purchasing-processes.md
+
             credit = component "Credit endpoint"
             debit = component "Debit endpoint"
           }
@@ -78,7 +83,9 @@ workspace {
             accounts = component "Accounts endpoint"
             transactions = component "Transactions endpoint"
           }
-          sync = springBootAPI "Sync service" "A service to allow NOMIS to sync with Prisoner Finance"
+          sync = springBootAPI "Sync service" "A service to allow NOMIS to sync with Prisoner Finance"  {
+            !docs ./docs/sync-processes.md
+          }
           GL = datastore "General ledger DB"
         }
 
@@ -268,6 +275,13 @@ workspace {
     }
 
     views {
+        properties {
+            "mermaid.url" "http://localhost:8888"
+            "mermaid.format" "svg"
+            "plantuml.url" "http://localhost:8888"
+            "plantuml.format" "svg"
+        }
+
         /*
         systemLandscape PF {
             include *
