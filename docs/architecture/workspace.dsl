@@ -1,7 +1,9 @@
-workspace {
+workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components that make up The HMPPS Prisoner Finance Service (PF)" {
 
     !identifiers hierarchical
     !impliedRelationships true
+
+    !adrs ./adrs
 
     # !plugin com.structurizr.dsl.plugin.documentation.Mermaid
     # !plugin com.structurizr.dsl.plugin.documentation.PlantUML
@@ -233,15 +235,21 @@ workspace {
 
         dev = deploymentEnvironment "DEV" {
 
-            MOJ = deploymentNode "Amazon Web Services - MoJ Cloud Platform" {
+            MOJ = deploymentNode "MoJ Cloud Platform" {
                 tags "Amazon Web Services - Cloud"
 
-                cloud = deploymentNode "EU-West-2 London" {
+                cloud = deploymentNode "EU-West-2 (London)" {
                     tags "Amazon Web Services - Region"
 
-                    route53 = infrastructureNode "Route 53"
-                    elb = infrastructureNode "Elastic Load Balancer"
-                    domainEvents = infrastructureNode "Domain events"
+                    route53 = infrastructureNode "Route 53" {
+                        tags "Amazon Web Services - Route 53"
+                    }
+                    elb = infrastructureNode "Elastic Load Balancer" {
+                        tags "Amazon Web Services - Elastic Load Balancing"
+                    }
+                    domainEvents = infrastructureNode "Domain events" {
+                        tags "Amazon Web Services - Simple Notification Service SNS"
+                    }
 
                     route53 --https-> elb "Forwards requests to"
 
@@ -264,9 +272,9 @@ workspace {
                     k8.syncApplicationInstance --https-> domainEvents "Listens to"
 
                     rds = deploymentNode "Amazon RDS" {
-                        postgreSQL = deploymentNode "PostgreSQL" {
-                            generalLedger = containerInstance PF.gl
-                        }
+                        tags "Amazon Web Services - RDS PostgreSQL instance"
+
+                        generalLedger = containerInstance PF.gl
                     }
                 }
             }
@@ -316,6 +324,18 @@ workspace {
                 background #08427b
                 color #ffffff
             }
+
+            element "Datastore" {
+                shape cylinder
+            }
+
+            element "Lambda" {
+                shape circle
+                background #FFAC33
+            }
+
+            theme default
+            themes https://static.structurizr.com/themes/amazon-web-services-2020.04.30/theme.json
         }
     }
 }
