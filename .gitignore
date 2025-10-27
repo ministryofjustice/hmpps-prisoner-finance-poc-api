@@ -76,8 +76,8 @@ sonar-project.properties
 .DS_Store
 
 #C4
-docs/c4/.structurizr
-docs/c4/plantuml
-docs/c4/mermaid
-docs/c4/png
-docs/c4/**/*.json
+docs/architecture/.structurizr
+docs/architecture/plantuml
+docs/architecture/mermaid
+docs/architecture/png
+docs/architecture/**/*.json

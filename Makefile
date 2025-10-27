@@ -48,17 +48,17 @@ format:
 check:
 	./gradlew check
 
-serve-structurizer:
+serve-architecture:
 	docker pull structurizr/lite
-	docker run -it --rm -v ./docs/c4:/usr/local/structurizr -p 8080:8080 structurizr/lite
+	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr -p 8080:8080 structurizr/lite
 
 export-c4-mermaid:
 	docker pull structurizr/cli:latest
-	docker run -it --rm -v ./docs/c4:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
+	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
 
 export-c4-plantuml:
 	docker pull structurizr/cli:latest
-	docker run -it --rm -v ./docs/c4:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
+	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
 
 export-c4-png: export-c4-plantuml
 	./bin/generate_images.sh
