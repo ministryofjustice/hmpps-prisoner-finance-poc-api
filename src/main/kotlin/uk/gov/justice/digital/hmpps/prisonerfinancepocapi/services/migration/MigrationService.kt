@@ -135,22 +135,20 @@ open class MigrationService(
 
       val transactionTimestamp = timeConversionService.toUtcInstant(balanceData.asOfTimestamp)
 
-      if (availableBalance.signum() != 0) {
-        val availableEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
-        val entryType = if (availableBalance.signum() > 0) PostingType.CR else PostingType.DR
-        availableEntries.add(Triple(prisonerAccount.id!!, availableBalance.abs(), entryType))
-        availableEntries.add(Triple(clearingAccount.id!!, availableBalance.abs(), if (entryType == PostingType.CR) PostingType.DR else PostingType.CR))
+      val availableEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
+      val entryType = if (availableBalance.signum() > 0) PostingType.CR else PostingType.DR
+      availableEntries.add(Triple(prisonerAccount.id!!, availableBalance.abs(), entryType))
+      availableEntries.add(Triple(clearingAccount.id!!, availableBalance.abs(), if (entryType == PostingType.CR) PostingType.DR else PostingType.CR))
 
-        transactionService.recordTransaction(
-          transactionType = "OB",
-          description = "Prisoner Balance Migration",
-          entries = availableEntries,
-          transactionTimestamp = transactionTimestamp,
-          prison = balanceData.prisonId,
-          legacyTransactionId = balanceData.transactionId,
-          createdAt = migrationBatchTime,
-        )
-      }
+      transactionService.recordTransaction(
+        transactionType = "OB",
+        description = "Prisoner Balance Migration",
+        entries = availableEntries,
+        transactionTimestamp = transactionTimestamp,
+        prison = balanceData.prisonId,
+        legacyTransactionId = balanceData.transactionId,
+        createdAt = migrationBatchTime,
+      )
 
       if (holdBalance.signum() != 0) {
         val holdEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
