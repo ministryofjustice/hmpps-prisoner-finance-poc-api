@@ -50,28 +50,31 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
           generic = expressFrontend "Prisoner Finance UIs"
           specialised = expressFrontend "Specialised task UIs"
 
-          generalLedger = springBootAPI "General Ledger" {
+          payments = springBootAPI "Payments" {
             !docs ./docs/purchasing-processes.md
 
             credit = component "Credit endpoint"
             debit = component "Debit endpoint"
+          }
+
+          generalLedger = springBootAPI "General ledger" {
             accounts = component "Accounts endpoint"
             transactions = component "Transactions endpoint"
           }
 
-          datastore = rds "datastore"
+          datastore = datastore "General ledger DB"
 
           sync = springBootAPI "Sync service" "A service to allow NOMIS to sync with Prisoner Finance"  {
             !docs ./docs/sync-processes.md
           }
 
-          generalLedger.credit --https-> hmpps-auth "Reads from"
-          generalLedger.credit --https-> hmpps-audit "Writes to"
-          generalLedger.credit --https-> datastore "Writes to"
+          payments.credit --https-> hmpps-auth "Reads from"
+          payments.credit --https-> hmpps-audit "Writes to"
+          payments.credit --https-> datastore "Writes to"
 
-          generalLedger.debit --https-> hmpps-auth "Reads from"
-          generalLedger.debit --https-> hmpps-audit "Writes to"
-          generalLedger.debit --https-> datastore "Writes to"
+          payments.debit --https-> hmpps-auth "Reads from"
+          payments.debit --https-> hmpps-audit "Writes to"
+          payments.debit --https-> datastore "Writes to"
 
           generalLedger.accounts --https-> hmpps-auth "Reads from"
           generalLedger.accounts --https-> hmpps-audit "Writes to"
@@ -87,14 +90,14 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
           generic --https-> hmpps-audit "Writes to"
           generic --https-> generalLedger.accounts "Reads from"
           generic --https-> generalLedger.transactions "Reads from"
-          generic --https-> generalLedger.debit "Writes to"
-          generic --https-> generalLedger.credit "Writes to"
+          generic --https-> payments.debit "Writes to"
+          generic --https-> payments.credit "Writes to"
 
           specialised --https-> hmpps-auth "Reads from"
           specialised --https-> hmpps-audit "Writes to"
           specialised --https-> generalLedger.accounts "Reads from"
-          specialised --https-> generalLedger.debit "Writes to"
-          specialised --https-> generalLedger.credit "Writes to"
+          specialised --https-> payments.debit "Writes to"
+          specialised --https-> payments.credit "Writes to"
 
           sync --https-> datastore "Reads from"
           sync --https-> datastore "Writes to"
@@ -163,23 +166,23 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
         FandF --https-> govPay "Uses"
 
         launchpad --https-> PF.generalLedger.accounts "Reads from"
-        launchpad --https-> PF.generalLedger.debit "Writes to"
+        launchpad --https-> PF.payments.debit "Writes to"
         launchpad --https-> PF.generalLedger.transactions "Reads from"
 
-        activities --https-> PF.generalLedger.credit "Writes to"
+        activities --https-> PF.payments.credit "Writes to"
 
-        adjudications --https-> PF.generalLedger.debit "Writes to"
+        adjudications --https-> PF.payments.debit "Writes to"
 
         SMTP --https-> prison-api "Writes to"
         SMTP --https-> prison-api "Reads from"
-        SMTP --https-> PF.generalLedger.credit "Writes to"
-        SMTP --https-> PF.generalLedger.debit "Writes to"
+        SMTP --https-> PF.payments.credit "Writes to"
+        SMTP --https-> PF.payments.debit "Writes to"
         SMTP --https-> PF.generalLedger.accounts "Reads from"
 
         integrationAPI --https-> PF.generalLedger.accounts "Reads from"
         integrationAPI --https-> PF.generalLedger.transactions "Reads from"
-        integrationAPI --https-> PF.generalLedger.credit "Writes to"
-        integrationAPI --https-> PF.generalLedger.debit "Writes to"
+        integrationAPI --https-> PF.payments.credit "Writes to"
+        integrationAPI --https-> PF.payments.debit "Writes to"
 
         prisonerProfile --https-> PF.generalLedger.accounts "Reads from"
         prisonerProfile --https-> PF.generalLedger.transactions "Reads from"
@@ -218,6 +221,8 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
         !include ./domain/views.dsl
 
         theme default
+        theme https://static.structurizr.com/themes/amazon-web-services-2020.04.30/theme.json
+        theme https://static.structurizr.com/themes/amazon-web-services-2022.04.30/theme.json
         theme https://static.structurizr.com/themes/amazon-web-services-2023.01.31/theme.json
         theme ./domain/theme.json
     }

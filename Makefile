@@ -48,18 +48,32 @@ format:
 check:
 	./gradlew check
 
-serve-architecture:
-	docker pull structurizr/lite
-	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr -p 8080:8080 structurizr/lite
+update-structurizer-cli:
+	docker pull structurizr/cli
 
-export-c4-mermaid:
+export-theme: update-structurizer-cli
+	docker run -it --rm -v ./docs/architecture/domain:/usr/local/structurizr structurizr/cli export -w theme.dsl -f theme
+	mv ./docs/architecture/domain/theme-theme.json ./docs/architecture/domain/theme.json
+
+update-structurizer-lite:
+	docker pull structurizr/lite
+
+WORKSPACE_PATH=./
+WORKSPACE_FILE=workspace
+
+serve-structurizer: update-structurizer-lite
+	docker run -it --rm -p 8080:8080 -v .:/usr/local/structurizr -e STRUCTURIZR_WORKSPACE_PATH=$(WORKSPACE_PATH) -e STRUCTURIZR_WORKSPACE_FILENAME=$(WORKSPACE_FILE) structurizr/lite
+
+serve-architecture: WORKSPACE_PATH=./docs/architecture
+serve-architecture: WORKSPACE_FILE=workspace
+serve-architecture: serve-structurizer
+
+export-c4-mermaid: update-structurizer-cli
 	rm -fr ./docs/architecture/mermaid
-    docker pull structurizr/cli:latest
 	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
 
-export-c4-plantuml:
+export-c4-plantuml: update-structurizer-cli
 	rm -fr ./docs/architecture/plantuml
-	docker pull structurizr/cli:latest
 	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
 
 export-c4-png: export-c4-plantuml
