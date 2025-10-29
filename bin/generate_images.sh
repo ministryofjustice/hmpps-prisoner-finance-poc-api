@@ -1,8 +1,8 @@
 #!/bin/sh -e
 root_dir="$(git rev-parse --show-toplevel)"
 ext_dir="$root_dir/build/tmp"
-exports_dir="$root_dir/docs/c4/plantuml"
-output_dir="$root_dir/docs/c4/png"
+exports_dir="$root_dir/docs/architecture/plantuml"
+output_dir="$root_dir/docs/architecture/png"
 
 mkdir -p "$ext_dir"
 mkdir -p "$output_dir"

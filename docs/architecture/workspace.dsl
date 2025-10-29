@@ -3,57 +3,31 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
     !identifiers hierarchical
     !impliedRelationships true
 
-    !adrs ./adrs
-
-    # !plugin com.structurizr.dsl.plugin.documentation.Mermaid
-    # !plugin com.structurizr.dsl.plugin.documentation.PlantUML
-
     model {
-        archetypes {
-            api = container {
-                technology "Kotlin"
-                tag "API"
-            }
-            springBootAPI = api {
-                technology "Spring Boot"
-            }
-            frontend = container {
-                technology "Typescript"
-                tag "UI"
-            }
-            expressFrontend = container {
-                technology "ExpressJS"
-            }
-            datastore = container {
-                technology "PostgreSQL"
-                tag "Datastore"
+        properties {
+            "structurizr.groupSeparator" "::"
+        }
+
+        !include ./domain/archetypes.dsl
+
+        group "Users" {
+            group "Prison Users" {
+                prison = person "Prison staff"
+                cashier = person "Prison cashier"
+                prisoner = person "Prisoner"
             }
 
-            externalSystem = softwareSystem {
-                tag "External System"
-            }
-            legacySystem = softwareSystem {
-                tag "Legacy System"
+            group "HMPPS Users" {
+                FBP = person "Finance business partner"
+                accountant = person "Accountant"
             }
 
-            sync = -> {
-                tags "Synchronous"
-            }
-            https = --sync-> {
-                technology "HTTPS"
+            group "External Users" {
+                FandF = person "Friends and family"
             }
         }
 
-        users = group "Users" {
-            prison = person "Prison staff"
-            cashier = person "Prison cashier"
-            FBP = person "Finance business partner"
-            accountant = person "Accountant"
-            prisoner = person "Prisoner"
-            FandF = person "Friends and family"
-        }
-
-        DPS = group "Digital Prison Services (DPS)" {
+        group "Digital Prison Services (DPS)" {
             hmpps-auth = externalSystem "HMPPS Auth service"
             hmpps-audit = externalSystem "HMPPS Audit service"
             prisonerProfile = externalSystem "Prisoner profile service"
@@ -63,41 +37,76 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
             integrationAPI = externalSystem "External integration API"
         }
 
-        prisonServices = group "Prison services" {
+        group "Prison services" {
             launchpad = externalSystem "Launchpad"
             SMTP = externalSystem "Send money to prisoners service"
 
-            domainEvents = externalSystem "Prison domain events" "An AWS SQS queue" {
-                tags "Queue"
+            domainEvents = externalSystem "Prison domain events" {
+                tags "Amazon Web Services - Simple Queue Service SQS Queue"
             }
         }
 
         PF = softwareSystem "Prisoner finance service" {
           generic = expressFrontend "Prisoner Finance UIs"
           specialised = expressFrontend "Specialised task UIs"
-          payments = springBootAPI "Payments API" {
+
+          generalLedger = springBootAPI "General Ledger" {
             !docs ./docs/purchasing-processes.md
 
             credit = component "Credit endpoint"
             debit = component "Debit endpoint"
-          }
-          accounts = springBootAPI "Accounts API" {
             accounts = component "Accounts endpoint"
             transactions = component "Transactions endpoint"
           }
+
+          datastore = rds "datastore"
+
           sync = springBootAPI "Sync service" "A service to allow NOMIS to sync with Prisoner Finance"  {
             !docs ./docs/sync-processes.md
           }
-          GL = datastore "General ledger DB"
+
+          generalLedger.credit --https-> hmpps-auth "Reads from"
+          generalLedger.credit --https-> hmpps-audit "Writes to"
+          generalLedger.credit --https-> datastore "Writes to"
+
+          generalLedger.debit --https-> hmpps-auth "Reads from"
+          generalLedger.debit --https-> hmpps-audit "Writes to"
+          generalLedger.debit --https-> datastore "Writes to"
+
+          generalLedger.accounts --https-> hmpps-auth "Reads from"
+          generalLedger.accounts --https-> hmpps-audit "Writes to"
+          generalLedger.accounts --https-> datastore "Reads from"
+          generalLedger.accounts --https-> prisonerSearch "Searches"
+
+          generalLedger.transactions --https-> hmpps-auth "Reads from"
+          generalLedger.transactions --https-> hmpps-audit "Writes to"
+          generalLedger.transactions --https-> datastore "Reads from"
+          generalLedger.transactions --https-> prisonerSearch "Searches"
+
+          generic --https-> hmpps-auth "Reads from"
+          generic --https-> hmpps-audit "Writes to"
+          generic --https-> generalLedger.accounts "Reads from"
+          generic --https-> generalLedger.transactions "Reads from"
+          generic --https-> generalLedger.debit "Writes to"
+          generic --https-> generalLedger.credit "Writes to"
+
+          specialised --https-> hmpps-auth "Reads from"
+          specialised --https-> hmpps-audit "Writes to"
+          specialised --https-> generalLedger.accounts "Reads from"
+          specialised --https-> generalLedger.debit "Writes to"
+          specialised --https-> generalLedger.credit "Writes to"
+
+          sync --https-> datastore "Reads from"
+          sync --https-> datastore "Writes to"
         }
 
-        external = group "External vendors" {
+        group "External vendors" {
             BT = externalSystem "BT PIN phone service"
             DHL = externalSystem "DHL canteen service"
             unilink = externalSystem "Unilink Custodial Management System"
         }
 
-        legacy = group "Legacy systems" {
+        group "Legacy systems" {
             NOMIS = legacySystem "NOMIS" "Prison Management System" {
                 application = container "NOMIS Application" {
                     technology "Oracle Forms"
@@ -116,15 +125,15 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
             prison-api -> NOMIS.nomis-db "Writes to"
         }
 
-        cabinet = group "Cabinet office" {
+        group "Cabinet office" {
             SOP = externalSystem "Single Operating Platform (SOP)"
         }
 
-        GDS = group "Government Digital Service (GDS)" {
+        group "Government Digital Service (GDS)" {
             govPay = externalSystem "GOV UK Pay"
         }
 
-        bank = group "Bank accounts" {
+        group "Bank accounts" {
             hmppsGeneral = externalSystem "HMPPS general"
             prisonerTrustFunds = externalSystem "Prisoner trust funds"
         }
@@ -153,64 +162,31 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
         FandF --https-> SMTP "Uses"
         FandF --https-> govPay "Uses"
 
-        launchpad --https-> PF.accounts.accounts "Reads from"
-        launchpad --https-> PF.payments.debit "Writes to"
-        launchpad --https-> PF.accounts.transactions "Reads from"
+        launchpad --https-> PF.generalLedger.accounts "Reads from"
+        launchpad --https-> PF.generalLedger.debit "Writes to"
+        launchpad --https-> PF.generalLedger.transactions "Reads from"
 
-        activities --https-> PF.payments.credit "Writes to"
+        activities --https-> PF.generalLedger.credit "Writes to"
 
-        adjudications --https-> PF.payments.debit "Writes to"
+        adjudications --https-> PF.generalLedger.debit "Writes to"
 
         SMTP --https-> prison-api "Writes to"
         SMTP --https-> prison-api "Reads from"
-        SMTP --https-> PF.payments.credit "Writes to"
-        SMTP --https-> PF.payments.debit "Writes to"
-        SMTP --https-> PF.accounts "Reads from"
+        SMTP --https-> PF.generalLedger.credit "Writes to"
+        SMTP --https-> PF.generalLedger.debit "Writes to"
+        SMTP --https-> PF.generalLedger.accounts "Reads from"
 
-        integrationAPI --https-> PF.accounts.accounts "Reads from"
-        integrationAPI --https-> PF.accounts.transactions "Reads from"
-        integrationAPI --https-> PF.payments.credit "Writes to"
-        integrationAPI --https-> PF.payments.debit "Writes to"
+        integrationAPI --https-> PF.generalLedger.accounts "Reads from"
+        integrationAPI --https-> PF.generalLedger.transactions "Reads from"
+        integrationAPI --https-> PF.generalLedger.credit "Writes to"
+        integrationAPI --https-> PF.generalLedger.debit "Writes to"
 
-        prisonerProfile --https-> PF.accounts.accounts "Reads from"
-        prisonerProfile --https-> PF.accounts.transactions "Reads from"
+        prisonerProfile --https-> PF.generalLedger.accounts "Reads from"
+        prisonerProfile --https-> PF.generalLedger.transactions "Reads from"
 
-        PF.generic --https-> hmpps-auth "Reads from"
-        PF.generic --https-> hmpps-audit "Writes to"
-        PF.generic --https-> PF.accounts.accounts "Reads from"
-        PF.generic --https-> PF.accounts.transactions "Reads from"
-        PF.generic --https-> PF.payments.debit "Writes to"
-        PF.generic --https-> PF.payments.credit "Writes to"
-
-        PF.specialised --https-> hmpps-auth "Reads from"
-        PF.specialised --https-> hmpps-audit "Writes to"
-        PF.specialised --https-> PF.accounts.accounts "Reads from"
-        PF.specialised --https-> PF.payments.debit "Writes to"
-        PF.specialised --https-> PF.payments.credit "Writes to"
-
-        PF.payments.credit --https-> hmpps-auth "Reads from"
-        PF.payments.credit --https-> hmpps-audit "Writes to"
-        PF.payments.credit --https-> PF.gl "Writes to"
-        PF.payments.debit --https-> hmpps-auth "Reads from"
-        PF.payments.debit --https-> hmpps-audit "Writes to"
-        PF.payments.debit --https-> PF.gl "Writes to"
-
-        PF.accounts.accounts --https-> hmpps-auth "Reads from"
-        PF.accounts.accounts --https-> hmpps-audit "Writes to"
-        PF.accounts.accounts --https-> PF.gl "Reads from"
-        PF.accounts.accounts --https-> prisonerSearch "Searches"
-
-        PF.accounts.transactions --https-> hmpps-auth "Reads from"
-        PF.accounts.transactions --https-> hmpps-audit "Writes to"
-        PF.accounts.transactions --https-> PF.gl "Reads from"
-        PF.accounts.transactions --https-> prisonerSearch "Searches"
-
-        PF.sync --https-> PF.GL "Reads from"
-        PF.sync --https-> PF.GL "Writes to"
-
-        PF.GL -> hmppsGeneral "Instructs"
-        PF.GL -> prisonerTrustFunds "Instructs"
-        PF.GL -> SOP "Instructs"
+        PF -> hmppsGeneral "Instructs"
+        PF -> prisonerTrustFunds "Instructs"
+        PF -> SOP "Instructs"
 
         GOVPay -> prisonerTrustFunds "Moves money into"
 
@@ -233,109 +209,16 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
         NOMIS.application --https-> domainEvents "Listens to"
         PF.sync --https-> domainEvents "Pushes to"
 
-        dev = deploymentEnvironment "DEV" {
-
-            MOJ = deploymentNode "MoJ Cloud Platform" {
-                tags "Amazon Web Services - Cloud"
-
-                cloud = deploymentNode "EU-West-2 (London)" {
-                    tags "Amazon Web Services - Region"
-
-                    route53 = infrastructureNode "Route 53" {
-                        tags "Amazon Web Services - Route 53"
-                    }
-                    elb = infrastructureNode "Elastic Load Balancer" {
-                        tags "Amazon Web Services - Elastic Load Balancing"
-                    }
-                    domainEvents = infrastructureNode "Domain events" {
-                        tags "Amazon Web Services - Simple Notification Service SNS"
-                    }
-
-                    route53 --https-> elb "Forwards requests to"
-
-                    k8 = deploymentNode "Kubernetes" {
-                        tags "Amazon Web Services - Kubernetes Service"
-
-                        genericWebApplicationInstance = containerInstance PF.generic
-                        specialisedWebApplicationInstance = containerInstance PF.specialised
-                        accountsApiApplicationInstance = containerInstance PF.accounts
-                        paymentsApiApplicationInstance = containerInstance PF.payments
-                        syncApplicationInstance = containerInstance PF.sync
-                    }
-
-                    elb --https-> k8.genericWebApplicationInstance "Forwards requests to"
-                    elb --https-> k8.specialisedWebApplicationInstance "Forwards requests to"
-                    elb --https-> k8.accountsApiApplicationInstance "Forwards requests to"
-                    elb --https-> k8.paymentsApiApplicationInstance "Forwards requests to"
-
-                    k8.syncApplicationInstance --https-> domainEvents "Publishes to"
-                    k8.syncApplicationInstance --https-> domainEvents "Listens to"
-
-                    rds = deploymentNode "Amazon RDS" {
-                        tags "Amazon Web Services - RDS PostgreSQL instance"
-
-                        generalLedger = containerInstance PF.gl
-                    }
-                }
-            }
-        }
-
+        !include ./domain/environments/dev.dsl
     }
 
+    !adrs ./adrs
+
     views {
-        properties {
-            "mermaid.url" "http://localhost:8888"
-            "mermaid.format" "svg"
-            "plantuml.url" "http://localhost:8888"
-            "plantuml.format" "svg"
-        }
+        !include ./domain/views.dsl
 
-        /*
-        systemLandscape PF {
-            include *
-            autolayout tb
-        }
-
-        container PF {
-            include *
-            autolayout lr
-        }
-        */
-
-        styles {
-
-            element "Software System" {
-                background #1168bd
-                color #ffffff
-            }
-
-            element "Legacy System" {
-                background #cccccc
-                color #000000
-            }
-
-            element "External System" {
-                background #3598EE
-                color #000000
-            }
-
-            element "Person" {
-                shape person
-                background #08427b
-                color #ffffff
-            }
-
-            element "Datastore" {
-                shape cylinder
-            }
-
-            element "Lambda" {
-                shape circle
-                background #FFAC33
-            }
-
-            theme default
-            themes https://static.structurizr.com/themes/amazon-web-services-2020.04.30/theme.json
-        }
+        theme default
+        theme https://static.structurizr.com/themes/amazon-web-services-2023.01.31/theme.json
+        theme ./domain/theme.json
     }
 }

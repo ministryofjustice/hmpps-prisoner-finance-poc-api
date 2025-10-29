@@ -53,14 +53,17 @@ serve-architecture:
 	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr -p 8080:8080 structurizr/lite
 
 export-c4-mermaid:
-	docker pull structurizr/cli:latest
+	rm -fr ./docs/architecture/mermaid
+    docker pull structurizr/cli:latest
 	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
 
 export-c4-plantuml:
+	rm -fr ./docs/architecture/plantuml
 	docker pull structurizr/cli:latest
 	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
 
 export-c4-png: export-c4-plantuml
+	rm -fr ./docs/architecture/png
 	./bin/generate_images.sh
 
 .PHONY: build-dev build update-dependencies analyse-dependencies serve serve-environment serve-clean-environment update-environment stop stop-clean unit-test integration-test test e2e lint format check serve-structurizer export-c4-mermaid export-c4-plantuml
