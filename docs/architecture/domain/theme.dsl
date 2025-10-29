@@ -51,10 +51,7 @@ workspace "HMPPS Electronic Monitoring" "This theme includes element styles with
 
             element "Datastore" {
                 shape cylinder
-            }
-
-            element "Database" {
-                shape cylinder
+                background #84a6b8
             }
 
             // message queues
