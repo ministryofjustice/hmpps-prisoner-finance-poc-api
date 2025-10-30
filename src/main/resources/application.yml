@@ -21,7 +21,7 @@ spring:
     open-in-view: false
     generate-ddl: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
 
   flyway:
     enabled: true
@@ -31,12 +31,12 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${hmpps-auth.url}/.well-known/jwks.json
+          jwk-set-uri: ${services.hmpps-auth.url}/.well-known/jwks.json
 
       client:
         provider:
           hmpps-auth:
-            token-uri: ${hmpps-auth.url}/oauth/token
+            token-uri: ${services.hmpps-auth.url}/oauth/token
   http:
     codecs:
       max-in-memory-size: 10MB
@@ -72,3 +72,6 @@ management:
     info:
       cache:
         time-to-live: 2000ms
+
+hmpps-auth:
+  url: ${HMPPS_AUTH_URL}
