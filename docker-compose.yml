@@ -1,4 +1,3 @@
-version: "3"
 services:
   hmpps-prisoner-finance-poc-api:
     build:
@@ -12,8 +11,17 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ping"]
     environment:
       - SERVER_PORT=8080
-      - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
-      - SPRING_PROFILES_ACTIVE=local
+      - HMPPS_AUTH_URL=http://hmpps-auth:8090/auth
+      - DB_SERVER=hmpps-prisoner-finance-poc-db
+      - DB_NAME=nomis_sync
+      - DB_USER=postgres
+      - DB_PASS=postgres
+    depends_on:
+      hmpps-auth:
+        condition: service_started
+      hmpps-prisoner-finance-poc-db:
+        condition: service_healthy
+        restart: true
 
   hmpps-prisoner-finance-poc-db:
     container_name: hmpps-prisoner-finance-poc-db
@@ -24,11 +32,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: nomis_sync
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=nomis_sync
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
