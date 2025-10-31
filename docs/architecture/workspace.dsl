@@ -66,6 +66,14 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
 
           sync = springBootAPI "Sync service" "A service to allow NOMIS to sync with Prisoner Finance"  {
             !docs ./docs/sync-processes.md
+
+            syncPrisonerTransactions = component "Sync offender transactions"
+            migratePrisonerBalances = component "Migrate prisoner balances"
+            reconcilePrisonerBalances = component "Reconcile prisoner balances"
+
+            syncGeneralLedgerTransactions = component "Sync general ledger transactions"
+            migrateGeneralLedgerBalances = component "Migrate general ledger balances"
+            reconcileGeneralLedgerBalances = component "Reconcile general ledger balances"
           }
 
           payments.credit --https-> hmpps-auth "Reads from"
@@ -99,8 +107,13 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
           specialised --https-> payments.debit "Writes to"
           specialised --https-> payments.credit "Writes to"
 
-          sync --https-> datastore "Reads from"
-          sync --https-> datastore "Writes to"
+          sync.syncPrisonerTransactions --https-> datastore "Writes to"
+          sync.migratePrisonerBalances --https-> datastore "Writes to"
+          sync.reconcilePrisonerBalances --https-> datastore "Reads from"
+
+          sync.syncGeneralLedgerTransactions --https-> datastore "Writes to"
+          sync.migrateGeneralLedgerBalances --https-> datastore "Writes to"
+          sync.reconcileGeneralLedgerBalances --https-> datastore "Reads from"
         }
 
         group "External vendors" {
@@ -208,9 +221,19 @@ workspace "HMPPS Prisoner Finance (PF)" "All services, systems and components th
         hmpps-auth --https-> NOMIS.nomis-db "Reads from"
 
         # Sync with NOMIS
-        NOMIS.application --https-> PF.sync "Writes to"
-        NOMIS.application --https-> domainEvents "Listens to"
-        PF.sync --https-> domainEvents "Pushes to"
+        NOMIS.application --json-> PF.sync "Writes to"
+        NOMIS.application --json-> domainEvents "Listens to"
+
+        NOMIS.application --json-> PF.sync.syncPrisonerTransactions "Writes to"
+        NOMIS.application --json-> PF.sync.migratePrisonerBalances "Writes to"
+        NOMIS.application --json-> PF.sync.reconcilePrisonerBalances "Reads from"
+
+        NOMIS.application --json-> PF.sync.syncGeneralLedgerTransactions "Writes to"
+        NOMIS.application --json-> PF.sync.migrateGeneralLedgerBalances "Writes to"
+        NOMIS.application --json-> PF.sync.reconcileGeneralLedgerBalances "Reads from"
+
+        PF.payments.debit --json-> domainEvents "Publishes to"
+        PF.payments.credit --json-> domainEvents "Publishes to"
 
         !include ./domain/environments/dev.dsl
     }

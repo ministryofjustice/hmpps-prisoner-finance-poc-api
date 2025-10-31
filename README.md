@@ -1,14 +1,15 @@
-# hmpps-prisoner-finance-poc-api
+# HMPPS Prisoner Finance API
 
 [![repo standards badge](https://img.shields.io/badge/endpoint.svg?&style=flat&logo=github&url=https%3A%2F%2Foperations-engineering-reports.cloud-platform.service.justice.gov.uk%2Fapi%2Fv1%2Fcompliant_public_repositories%2Fhmpps-prisoner-finance-poc-api)](https://operations-engineering-reports.cloud-platform.service.justice.gov.uk/public-report/hmpps-prisoner-finance-poc-api "Link to report")
 [![Docker Repository on ghcr](https://img.shields.io/badge/ghcr.io-repository-2496ED.svg?logo=docker)](https://ghcr.io/ministryofjustice/hmpps-prisoner-finance-poc-api)
 [![API docs](https://img.shields.io/badge/API_docs_-view-85EA2D.svg?logo=swagger)](https://prisoner-finance-poc-api-dev.hmpps.service.justice.gov.uk/swagger-ui/index.html)
 
-# Contents
+## Contents
 - [About this project](#about-this-project)
 - [Project set up](#project-set-up)
 - [Running the application locally](#running-the-application-locally)
   - [Running the application in intellij](#running-the-application-in-intellij)
+- [Architecture](#Architecture)
 
 ## About this project
 
@@ -45,15 +46,18 @@ will build the application and run it and HMPPS Auth within a local docker insta
 ### Running the application in Intellij
 
 ```bash
-serve-environment
+make serve-environment
 ```
 
 will just start a docker instance of HMPPS Auth with a PostgreSQL database. The application should then be started with 
 a `local` active profile in Intellij.
 
 ```bash
-serve-clean-environment
+make serve-clean-environment
 ```
 
 will also reset the database
 
+## Architecture
+
+For details of the current proposed architecture [view our C4 documentation](./docs/architecture)
