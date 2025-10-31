@@ -1,2 +1,2 @@
 hmpps-auth:
-  url: ${HMPPS_AUTH_URL:http://localhost:8090/auth}
+  url: "http://localhost:8090/auth"
