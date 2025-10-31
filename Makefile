@@ -68,16 +68,12 @@ serve-architecture: WORKSPACE_PATH=./docs/architecture
 serve-architecture: WORKSPACE_FILE=workspace
 serve-architecture: serve-structurizer
 
-export-c4-mermaid: update-structurizer-cli
+export-architecture: update-structurizer-cli
 	rm -fr ./docs/architecture/mermaid
-	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
-
-export-c4-plantuml: update-structurizer-cli
 	rm -fr ./docs/architecture/plantuml
-	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
-
-export-c4-png: export-c4-plantuml
 	rm -fr ./docs/architecture/png
+	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f mermaid -o ./mermaid
+	docker run -it --rm -v ./docs/architecture:/usr/local/structurizr structurizr/cli export -w ./workspace.dsl -f plantuml -o ./plantuml
 	./bin/generate_images.sh
 
-.PHONY: build-dev build update-dependencies analyse-dependencies serve serve-environment serve-clean-environment update-environment stop stop-clean unit-test integration-test test e2e lint format check serve-structurizer export-c4-mermaid export-c4-plantuml
+.PHONY: build-dev build update-dependencies analyse-dependencies serve serve-environment serve-clean-environment update-environment stop stop-clean unit-test integration-test test e2e lint format check serve-structurizer export-architecture
