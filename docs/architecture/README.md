@@ -5,7 +5,7 @@
 From the root of this repository run the following command to start the structurizr lite web service.
 
 ```shell
-make serve-structurizer
+make serve-architecture
 ```
 
 this will create a web service available at `http://localhost:8080` which will allow you to explore the workspace.
