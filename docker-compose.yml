@@ -11,7 +11,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ping"]
     environment:
       - SERVER_PORT=8080
-      - HMPPS_AUTH_URL=http://hmpps-auth:8090/auth
+      - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
       - DB_SERVER=hmpps-prisoner-finance-poc-db
       - DB_NAME=nomis_sync
       - DB_USER=postgres
