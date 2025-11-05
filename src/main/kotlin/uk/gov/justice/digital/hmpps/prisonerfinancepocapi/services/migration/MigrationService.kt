@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonerfinancepocapi.services.migration
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.Account
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.jpa.entities.PostingType
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.GeneralLedgerBalancesSyncRequest
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.models.migration.PrisonerBalancesSyncRequest
@@ -32,13 +33,7 @@ open class MigrationService(
     val prison = prisonService.getPrison(prisonId)
       ?: prisonService.createPrison(prisonId)
 
-    val clearingAccount = accountService.findGeneralLedgerAccount(
-      prisonId = prison.id!!,
-      accountCode = MIGRATION_CLEARING_ACCOUNT,
-    ) ?: accountService.createGeneralLedgerAccount(
-      prisonId = prison.id,
-      accountCode = MIGRATION_CLEARING_ACCOUNT,
-    )
+    val clearingAccount = resolveOrCreateClearingAccount(prison.id!!)
 
     request.accountBalances
       .forEach { balanceData ->
@@ -108,21 +103,8 @@ open class MigrationService(
     request.accountBalances.forEach { balanceData ->
       val prison = prisonService.getPrison(balanceData.prisonId)
         ?: prisonService.createPrison(balanceData.prisonId)
-      val clearingAccount = accountService.findGeneralLedgerAccount(
-        prisonId = prison.id!!,
-        accountCode = MIGRATION_CLEARING_ACCOUNT,
-      ) ?: accountService.createGeneralLedgerAccount(
-        prisonId = prison.id,
-        accountCode = MIGRATION_CLEARING_ACCOUNT,
-      )
 
-      val holdAccount = accountService.findGeneralLedgerAccount(
-        prisonId = prison.id,
-        accountCode = 2199,
-      ) ?: accountService.createGeneralLedgerAccount(
-        prisonId = prison.id,
-        accountCode = 2199,
-      )
+      val clearingAccount = resolveOrCreateClearingAccount(prison.id!!)
 
       val prisonerAccount = accountService.resolveAccount(
         balanceData.accountCode,
@@ -152,8 +134,8 @@ open class MigrationService(
 
       if (holdBalance.signum() != 0) {
         val holdEntries = mutableListOf<Triple<Long, BigDecimal, PostingType>>()
-        holdEntries.add(Triple(prisonerAccount.id!!, holdBalance.abs(), PostingType.DR))
-        holdEntries.add(Triple(holdAccount.id!!, holdBalance.abs(), PostingType.CR))
+        holdEntries.add(Triple(prisonerAccount.id, holdBalance.abs(), PostingType.DR))
+        holdEntries.add(Triple(clearingAccount.id, holdBalance.abs(), PostingType.CR))
 
         transactionService.recordTransaction(
           transactionType = "OHB",
@@ -167,4 +149,12 @@ open class MigrationService(
       }
     }
   }
+
+  private fun resolveOrCreateClearingAccount(prisonId: Long): Account = accountService.findGeneralLedgerAccount(
+    prisonId = prisonId,
+    accountCode = MIGRATION_CLEARING_ACCOUNT,
+  ) ?: accountService.createGeneralLedgerAccount(
+    prisonId = prisonId,
+    accountCode = MIGRATION_CLEARING_ACCOUNT,
+  )
 }
