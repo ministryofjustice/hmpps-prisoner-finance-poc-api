@@ -43,6 +43,10 @@ make serve
 
 will build the application and run it and HMPPS Auth within a local docker instance.
 
+To verify the app has started, 
+1. ensure the containers are visible (and running) in Docker, and 
+2. visit http://localhost:8080/health ensuring the result contains "status: UP"  
+
 ### Running the application in Intellij
 
 ```bash
