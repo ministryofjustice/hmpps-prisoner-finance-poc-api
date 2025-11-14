@@ -65,3 +65,31 @@ will also reset the database
 ## Architecture
 
 For details of the current proposed architecture [view our C4 documentation](./docs/architecture)
+
+## API Documentation
+Is available on a running local server at http://localhost:8080/swagger-ui/index.html#/
+
+### Health
+- `/health`: provides information about the application health and its dependencies. 
+- `/info`: provides information about the version of deployed application.
+
+## Using local API endpoints
+
+### Generating an auth token
+- Use this command to request a local auth token:
+  ```bash
+  curl -X POST "http://localhost:8090/auth/oauth/token?grant_type=client_credentials" -H 'Content-Type: application/json' -H "Authorization: Basic $(echo -n hmpps-prisoner-finance-poc-api-1:clientsecret | base64)"
+  ```
+  
+- The response body will contain an access token something like this:
+
+  ```json
+  {
+    "access_token": "eyJhbGciOiJSUzI1NiIsInR5...BAtWD653XpCzn8A",
+    "token_type": "bearer",
+    "expires_in": 3599,
+    "scope": "read write",
+    "sub": "hmpps-prisoner-finance-poc-api-1"        
+  }
+  ```
+- Use the value of `access_token` as a Bearer Token to authenticate when calling the local API endpoints.
