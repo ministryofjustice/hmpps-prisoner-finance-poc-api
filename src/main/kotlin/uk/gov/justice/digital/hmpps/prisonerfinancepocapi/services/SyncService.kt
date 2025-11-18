@@ -29,11 +29,7 @@ class SyncService(
     val existingPayloadByRequestId = syncQueryService.findByRequestId(request.requestId)
 
     if (existingPayloadByRequestId != null) {
-      return SyncTransactionReceipt(
-        requestId = request.requestId,
-        synchronizedTransactionId = existingPayloadByRequestId.synchronizedTransactionId,
-        action = SyncTransactionReceipt.Action.PROCESSED,
-      )
+      return receipt(request, existingPayloadByRequestId.synchronizedTransactionId, action = SyncTransactionReceipt.Action.PROCESSED)
     }
 
     val existingPayloadByTransactionId = syncQueryService.findByLegacyTransactionId(request.transactionId)
@@ -51,21 +47,13 @@ class SyncService(
       )
 
       if (isBodyIdentical) {
-        return SyncTransactionReceipt(
-          requestId = request.requestId,
-          synchronizedTransactionId = existingPayloadByTransactionId.synchronizedTransactionId,
-          action = SyncTransactionReceipt.Action.PROCESSED,
-        )
+        return receipt(request, existingPayloadByTransactionId.synchronizedTransactionId, SyncTransactionReceipt.Action.PROCESSED)
       } else {
         val newPayload = requestCaptureService.captureAndStoreRequest(
           request,
           existingPayloadByTransactionId.synchronizedTransactionId,
         )
-        return SyncTransactionReceipt(
-          requestId = request.requestId,
-          synchronizedTransactionId = newPayload.synchronizedTransactionId,
-          action = SyncTransactionReceipt.Action.UPDATED,
-        )
+        return receipt(request, newPayload.synchronizedTransactionId, SyncTransactionReceipt.Action.UPDATED)
       }
     }
 
@@ -86,12 +74,18 @@ class SyncService(
     }
 
     val newPayload = requestCaptureService.captureAndStoreRequest(request, synchronizedTransactionId)
-    return SyncTransactionReceipt(
-      requestId = request.requestId,
-      synchronizedTransactionId = newPayload.synchronizedTransactionId,
-      action = SyncTransactionReceipt.Action.CREATED,
-    )
+    return receipt(request,newPayload.synchronizedTransactionId, SyncTransactionReceipt.Action.CREATED)
   }
+
+  private fun receipt(
+    request: SyncRequest,
+    syncId: UUID,
+    action: SyncTransactionReceipt.Action
+  ) = SyncTransactionReceipt(
+    requestId = request.requestId,
+    synchronizedTransactionId = syncId,
+    action = action,
+  )
 
   private fun logRequestAsError(request: SyncRequest, exception: Exception) {
     val requestJson = try {
