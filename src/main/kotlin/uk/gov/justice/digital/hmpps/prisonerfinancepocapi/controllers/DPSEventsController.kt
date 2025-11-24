@@ -15,12 +15,12 @@ class DPSEventsController {
   @PostMapping("/mergePrisonerEvent")
   fun mergePrisonerEvent(
     @PathVariable event: PrisonerMergedEvent,
-  ) : ResponseEntity<String> {
+  ): ResponseEntity<String> {
     if (event.additionalInformation.nomsNumber.isNullOrBlank() ||
-        event.additionalInformation.removedNomsNumber.isNullOrBlank()) {
+      event.additionalInformation.removedNomsNumber.isNullOrBlank()
+    ) {
       return ResponseEntity.badRequest().body("Additional Information must not be null or empty")
     }
     return ResponseEntity.ok("")
   }
-
 }

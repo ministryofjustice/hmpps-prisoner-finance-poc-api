@@ -5,14 +5,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
-
 import org.mockito.junit.jupiter.MockitoExtension
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.events.AdditionalInformation
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.events.Identifier
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.events.PersonReference
 import uk.gov.justice.digital.hmpps.prisonerfinancepocapi.events.PrisonerMergedEvent
-
-
 
 @ExtendWith(MockitoExtension::class)
 class DPSEventsControllerTest {
@@ -29,8 +26,8 @@ class DPSEventsControllerTest {
     mockPrisonerMergedEvent = PrisonerMergedEvent(
       personReference = PersonReference(
         identifiers = listOf(
-          Identifier(type = "NOMS", value = "A8515EC")
-        )
+          Identifier(type = "NOMS", value = "A8515EC"),
+        ),
       ),
       occurredAt = "2024-08-15T10:23:45.000Z",
       description = "A prisoner has been merged from A8515EC to A8516EC",
@@ -70,8 +67,8 @@ class DPSEventsControllerTest {
         nomsNumber = "A8515EC",
         reason = "MERGE",
         bookingId = "123456",
-        removedNomsNumber = "A8516EC"
-      )
+        removedNomsNumber = "A8516EC",
+      ),
     )
   }
 
